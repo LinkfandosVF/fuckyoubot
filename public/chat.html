@@ -117,7 +117,7 @@ body{background:#0d1117;color:#e6edf3;font-family:-apple-system,BlinkMacSystemFo
     <option value="custom">Custom</option>
   </select>
   <div style="display:flex;gap:8px;align-items:center;margin-top:4px">
-    <span style="font-size:11px;color:#8b949e;white-space:nowrap;min-width:24px">0px</span>
+    <span style="font-size:11px;color:#8b949e;white-space:nowrap;min-width:24px" id="font-ol-val">0px</span>
     <input type="range" id="font-ol" min="0" max="5" step="1" value="0" style="flex:1">
     <input type="color" id="font-olc" value="#000000" style="width:32px;height:28px;padding:0;border:none;cursor:pointer">
   </div>
@@ -196,14 +196,14 @@ const flags = {
 };
 let filteredCommands = [], selectedCmdIdx = -1;
 let emotes = [];
-const DEFAULT_FONT = {fn:'Arial',fc:'#e6edf3',bg:'#21262d',ol:0,olc:'#000000',shx:1,shy:1,shb:2,shc:'#000000',sho:50};
+const DEFAULT_FONT = {fn:'Arial',fc:'#e6edf3',bg:'#21262d',ol:0,olc:'#000000',shx:0,shy:0,shb:0,shc:'#000000',sho:0};
 let fontSettings = (() => {
   const raw = localStorage.getItem('font');
   if (!raw) return {...DEFAULT_FONT};
   const parsed = JSON.parse(raw);
   // migrate old select-based outline/shadow
   if (typeof parsed.ol === 'string') { parsed.ol = 0; parsed.olc = '#000000'; }
-  if (typeof parsed.sh === 'string') { parsed.shx = 1; parsed.shy = 1; parsed.shb = 2; parsed.shc = '#000000'; parsed.sho = 50; delete parsed.sh; }
+  if (typeof parsed.sh === 'string') { parsed.shx = 0; parsed.shy = 0; parsed.shb = 0; parsed.shc = '#000000'; parsed.sho = 0; delete parsed.sh; }
   return {...DEFAULT_FONT, ...parsed};
 })();
 
@@ -228,44 +228,112 @@ settingsBtn.onclick = () => settingsPanel.classList.toggle('show');
 
 function applyFontStyle(el, f) {
   const ol = f.ol > 0 ? `${f.ol}px solid ${f.olc}` : 'none';
-  const sh = (f.shx || f.shy || f.shb) ? `${f.shx||0}px ${f.shy||0}px ${f.shb||0}px ${f.shc}${f.sho < 100 ? Math.round(f.sho*2.55).toString(16).padStart(2,'0') : ''}` : 'none';
+  const hasShadow = f.shx || f.shy || f.shb;
+  const sh = hasShadow ? `${f.shx||0}px ${f.shy||0}px ${f.shb||0}px ${f.shc}${f.sho < 100 ? Math.round(f.sho*2.55).toString(16).padStart(2,'0') : ''}` : 'none';
   el.style.cssText = `font-family:${f.fn};color:${f.fc};background:${f.bg};-webkit-text-stroke:${ol};text-shadow:${sh}`;
 }
 
-const fontKeys = [
+const outlinePresets = {
+  none:        { ol: 0, olc: '#000000' },
+  'thin-black':  { ol: 1, olc: '#000000' },
+  'thick-black': { ol: 2, olc: '#000000' },
+  'thin-white':  { ol: 1, olc: '#ffffff' },
+  'thick-white': { ol: 2, olc: '#ffffff' },
+};
+const shadowPresets = {
+  none:        { shx: 0, shy: 0, shb: 0, sho: 0 },
+  soft:        { shx: 1, shy: 1, shb: 2, sho: 30 },
+  medium:      { shx: 2, shy: 2, shb: 4, sho: 40 },
+  strong:      { shx: 3, shy: 3, shb: 6, sho: 50 },
+  'soft-light': { shx: 1, shy: 1, shb: 2, sho: 50, shc: '#ffffff' },
+};
+
+function presetToKey(p) { return p === 'custom' ? 'custom' : Object.keys(outlinePresets).includes(p) ? 'ol' : 'sh'; }
+
+function saveFont() {
+  localStorage.setItem('font', JSON.stringify(fontSettings));
+  updateFontPreview();
+}
+
+const fontEls = [
   {id:'font-family', key:'fn'},
   {id:'font-color', key:'fc'},
   {id:'font-bg', key:'bg'},
-  {id:'font-ol', key:'ol'},
+  {id:'font-ol', key:'ol', val:'font-ol-val'},
   {id:'font-olc', key:'olc'},
-  {id:'font-shx', key:'shx'},
-  {id:'font-shy', key:'shy'},
-  {id:'font-shb', key:'shb'},
+  {id:'font-shx', key:'shx', val:'font-shx-val'},
+  {id:'font-shy', key:'shy', val:'font-shy-val'},
+  {id:'font-shb', key:'shb', val:'font-shb-val'},
   {id:'font-shc', key:'shc'},
-  {id:'font-sho', key:'sho'},
+  {id:'font-sho', key:'sho', val:'font-sho-val'},
 ];
-fontKeys.forEach(({id, key}) => {
+fontEls.forEach(({id, key, val}) => {
   const el = document.getElementById(id);
   el.value = fontSettings[key] !== undefined ? fontSettings[key] : el.value;
-  el.onchange = el.oninput = () => {
+  el.oninput = () => {
     fontSettings[key] = el.type === 'number' || el.type === 'range' ? parseFloat(el.value) : el.value;
-    localStorage.setItem('font', JSON.stringify(fontSettings));
-    updateFontPreview();
+    saveFont();
+    if (val) document.getElementById(val).textContent = el.value + (key==='sho'?'%':'');
+    // set preset to Custom when a detail is tweaked
+    if (key.startsWith('ol')) document.getElementById('font-ol-preset').value = 'custom';
+    if (key.startsWith('sh')) document.getElementById('font-sh-preset').value = 'custom';
   };
 });
-function updateFontPreview() {
-  applyFontStyle(fontPreview, fontSettings);
-}
+
+document.getElementById('font-ol-preset').onchange = function() {
+  const p = outlinePresets[this.value];
+  if (!p) return;
+  fontSettings.ol = p.ol; fontSettings.olc = p.olc;
+  document.getElementById('font-ol').value = p.ol;
+  document.getElementById('font-olc').value = p.olc;
+  document.getElementById('font-ol-val').textContent = p.ol + 'px';
+  saveFont();
+};
+document.getElementById('font-sh-preset').onchange = function() {
+  const p = shadowPresets[this.value];
+  if (!p) return;
+  fontSettings.shx = p.shx; fontSettings.shy = p.shy; fontSettings.shb = p.shb; fontSettings.sho = p.sho;
+  if (p.shc !== undefined) fontSettings.shc = p.shc;
+  document.getElementById('font-shx').value = p.shx; document.getElementById('font-shx-val').textContent = p.shx;
+  document.getElementById('font-shy').value = p.shy; document.getElementById('font-shy-val').textContent = p.shy;
+  document.getElementById('font-shb').value = p.shb; document.getElementById('font-shb-val').textContent = p.shb;
+  document.getElementById('font-sho').value = p.sho; document.getElementById('font-sho-val').textContent = p.sho + '%';
+  saveFont();
+};
+
+function updateFontPreview() { applyFontStyle(fontPreview, fontSettings); }
 updateFontPreview();
 
 document.getElementById('reset-font').onclick = () => {
   fontSettings = {...DEFAULT_FONT};
   localStorage.setItem('font', JSON.stringify(fontSettings));
-  fontKeys.forEach(({id, key}) => {
-    document.getElementById(id).value = fontSettings[key];
+  fontEls.forEach(({id, key, val}) => {
+    const el = document.getElementById(id);
+    el.value = fontSettings[key];
+    if (val) document.getElementById(val).textContent = el.value + (key==='sho'?'%':'');
   });
+  document.getElementById('font-ol-preset').value = 'none';
+  document.getElementById('font-sh-preset').value = 'none';
   updateFontPreview();
 };
+
+// sync preset selects to current values on load
+(function syncPresets() {
+  const olp = document.getElementById('font-ol-preset');
+  const shp = document.getElementById('font-sh-preset');
+  for (const [val, p] of Object.entries(outlinePresets)) {
+    if (p.ol === fontSettings.ol && p.olc === fontSettings.olc) { olp.value = val; break; }
+  }
+  for (const [val, p] of Object.entries(shadowPresets)) {
+    if (p.shx === fontSettings.shx && p.shy === fontSettings.shy && p.shb === fontSettings.shb && p.sho === fontSettings.sho && (p.shc === undefined || p.shc === fontSettings.shc)) { shp.value = val; break; }
+  }
+  // update value labels
+  document.getElementById('font-ol-val').textContent = fontSettings.ol + 'px';
+  document.getElementById('font-shx-val').textContent = fontSettings.shx;
+  document.getElementById('font-shy-val').textContent = fontSettings.shy;
+  document.getElementById('font-shb-val').textContent = fontSettings.shb;
+  document.getElementById('font-sho-val').textContent = fontSettings.sho + '%';
+})();
 
 fetch('https://api.frankerfacez.com/v1/set/global').then(r=>r.json()).then(d=>{
   for (const set of Object.values(d.sets || {}))
