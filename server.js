@@ -154,7 +154,8 @@ function addMessage(source, username, text, replyTo = null, timestamp = null, co
       if (link.font) displayFont = link.font;
     }
   } catch (e) { console.log('link check error:', e.message); }
-  const msg = { id, source, username: displayName, message: text, timestamp: ts, replyTo, color, effect, font: displayFont, emotes, parsedHtml: parseEmotes(preParseTwitchEmotes(text, emotes)) };
+  const parsedHtml = source === 'twitch' ? preParseTwitchEmotes(text, emotes) : parseEmotes(text);
+  const msg = { id, source, username: displayName, message: text, timestamp: ts, replyTo, color, effect, font: displayFont, emotes, parsedHtml };
   if (linked) msg.linked = true;
   messages.push(msg);
   if (messages.length > 500) messages.shift();
