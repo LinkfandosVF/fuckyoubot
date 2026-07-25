@@ -12,7 +12,7 @@ app.use(express.static('public'));
 
 const DISCORD_WEBHOOK = 'https://discord.com/api/webhooks/1530664952317214770/BffXVgVSVWyU7oG-AVlgTDit2_i5_hB_8JipK9Fq8FHaL3I_kMaCk-3tAwfOoCprj_qk';
 const TWITCH_CHANNEL = 'mrpemmfub';
-const YOUTUBE_CHANNEL = '@MrPemmfub';
+const YOUTUBE_CHANNEL = 'MrPemmfub';
 const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY || '';
 
 const messages = [];
@@ -110,54 +110,54 @@ function sendToTwitch(source, username, text) {
   twitchWriter.say(TWITCH_CHANNEL.toLowerCase(), `[${prefix}] ${username}: ${text}`).catch(e => console.log('Twitch say:', e.message));
 }
 
-let ytInterval = null;
-async function setupYouTube() {
-  if (!YOUTUBE_API_KEY) { console.log('No YOUTUBE_API_KEY set, YouTube chat disabled'); return; }
+let ytChannelId = null;
+let ytLiveChatId = null;
+let ytNextPage = '';
+let ytPollTimer = null;
+
+async function findYTChannel() {
+  if (!YOUTUBE_API_KEY) return;
   try {
-    const searchRes = await axios.get('https://www.googleapis.com/youtube/v3/search', {
-      params: { part: 'snippet', q: YOUTUBE_CHANNEL, type: 'channel', key: YOUTUBE_API_KEY }
-    });
-    const channelId = searchRes.data.items?.[0]?.id?.channelId;
-    if (!channelId) return;
-    const liveRes = await axios.get('https://www.googleapis.com/youtube/v3/search', {
-      params: { part: 'id', channelId, eventType: 'live', type: 'video', key: YOUTUBE_API_KEY }
-    });
+    const r = await axios.get('https://www.googleapis.com/youtube/v3/search', { params: { part: 'snippet', q: YOUTUBE_CHANNEL, type: 'channel', key: YOUTUBE_API_KEY } });
+    ytChannelId = r.data.items?.[0]?.id?.channelId;
+    if (ytChannelId) console.log('YouTube channel:', ytChannelId);
+  } catch (e) { console.log('YouTube channel lookup failed:', e.message); }
+}
+
+async function checkYTLive() {
+  if (!YOUTUBE_API_KEY || !ytChannelId) return;
+  if (ytLiveChatId) return; // already connected
+  try {
+    const liveRes = await axios.get('https://www.googleapis.com/youtube/v3/search', { params: { part: 'id', channelId: ytChannelId, eventType: 'live', type: 'video', key: YOUTUBE_API_KEY } });
     const videoId = liveRes.data.items?.[0]?.id?.videoId;
     if (!videoId) return;
-    const vidRes = await axios.get('https://www.googleapis.com/youtube/v3/videos', {
-      params: { part: 'liveStreamingDetails', id: videoId, key: YOUTUBE_API_KEY }
-    });
-    const liveChatId = vidRes.data.items?.[0]?.liveStreamingDetails?.activeLiveChatId;
-    if (!liveChatId) return;
+    const vidRes = await axios.get('https://www.googleapis.com/youtube/v3/videos', { params: { part: 'liveStreamingDetails', id: videoId, key: YOUTUBE_API_KEY } });
+    ytLiveChatId = vidRes.data.items?.[0]?.liveStreamingDetails?.activeLiveChatId;
+    if (!ytLiveChatId) return;
     console.log('YouTube live chat connected');
 
-    let nextPageToken = '';
     try {
-      const initRes = await axios.get('https://www.googleapis.com/youtube/v3/liveChat/messages', {
-        params: { part: 'snippet,authorDetails', liveChatId, key: YOUTUBE_API_KEY }
-      });
-      nextPageToken = initRes.data.nextPageToken || '';
-      for (const item of initRes.data.items || []) {
-        const ts = new Date(item.snippet.publishedAt).getTime();
-        addMessage('youtube', item.authorDetails.displayName, item.snippet.displayMessage, null, ts);
-      }
+      const initRes = await axios.get('https://www.googleapis.com/youtube/v3/liveChat/messages', { params: { part: 'snippet,authorDetails', liveChatId: ytLiveChatId, key: YOUTUBE_API_KEY } });
+      ytNextPage = initRes.data.nextPageToken || '';
+      for (const item of initRes.data.items || []) addMessage('youtube', item.authorDetails.displayName, item.snippet.displayMessage, null, new Date(item.snippet.publishedAt).getTime());
     } catch {}
 
-    ytInterval = setInterval(async () => {
+    if (ytPollTimer) clearInterval(ytPollTimer);
+    ytPollTimer = setInterval(async () => {
+      if (!ytLiveChatId) return;
       try {
-        const res = await axios.get('https://www.googleapis.com/youtube/v3/liveChat/messages', {
-          params: { part: 'snippet,authorDetails', liveChatId, pageToken: nextPageToken, key: YOUTUBE_API_KEY }
-        });
-        nextPageToken = res.data.nextPageToken || '';
-        for (const item of res.data.items || []) {
-          const ts = new Date(item.snippet.publishedAt).getTime();
-          addMessage('youtube', item.authorDetails.displayName, item.snippet.displayMessage, null, ts);
-        }
+        const res = await axios.get('https://www.googleapis.com/youtube/v3/liveChat/messages', { params: { part: 'snippet,authorDetails', liveChatId: ytLiveChatId, pageToken: ytNextPage, key: YOUTUBE_API_KEY } });
+        ytNextPage = res.data.nextPageToken || '';
+        for (const item of res.data.items || []) addMessage('youtube', item.authorDetails.displayName, item.snippet.displayMessage, null, new Date(item.snippet.publishedAt).getTime());
       } catch {}
     }, 5000);
-  } catch (e) { console.log('YouTube setup failed:', e.message); }
+  } catch {}
 }
-setupYouTube();
+
+findYTChannel().then(() => {
+  checkYTLive();
+  setInterval(checkYTLive, 60000); // recheck every 60s for stream start
+});
 
 io.on('connection', (socket) => {
   socket.emit('history', messages);
