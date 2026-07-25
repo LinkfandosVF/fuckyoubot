@@ -8,10 +8,8 @@
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:#fff;color:#000;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;display:flex;flex-direction:column;height:100vh}
 @keyframes wave{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
-@keyframes rainbow{0%{filter:hue-rotate(0deg)}100%{filter:hue-rotate(360deg)}}
 @keyframes flagAnim{0%{background-position:0% 50%}100%{background-position:100% 50%}}
 .wave-text span{display:inline-block;animation:wave .4s ease-in-out infinite}
-.rainbow-text{animation:rainbow 1s linear infinite;color:#f00!important}
 .flag-text{background-size:200% 100%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:flagAnim 3s linear infinite}
 #header{display:flex;align-items:center;justify-content:space-between;padding:8px 16px;border-bottom:1px solid #e0e0e0;background:#fff;position:relative;z-index:10}
 #header h1{font-size:16px;font-weight:700;color:#000}
@@ -269,10 +267,7 @@ function appendMessage(msg, scroll) {
       }
     } else if (msg.effect === 'rainbow') {
       bubble.dataset.effect = 'rainbow';
-      const sp = document.createElement('span');
-      sp.className = 'rainbow-text';
-      sp.textContent = msg.message;
-      bubble.appendChild(sp);
+      applyRainbow(bubble, msg.message);
     } else if (msg.effect.startsWith('flag:')) {
       const fname = msg.effect.replace('flag:', '');
       const cols = flags[fname] || flags.pride;
@@ -296,15 +291,15 @@ function appendMessage(msg, scroll) {
 
   if (msg.effect) {
     setTimeout(() => {
-      bubble.classList.remove('wave-text','rainbow-text','flag-text');
-      const spans = bubble.querySelectorAll('span');
-      if (msg.effect === 'wave') {
-        bubble.textContent = msg.message;
-        const tag = document.createElement('span'); tag.className = 'effect-tag';
-        tag.textContent = msg.effect.startsWith('flag:') ? msg.effect.replace('flag:','') : msg.effect;
-        tag.onclick = () => replayEffect(bubble, msg.effect);
-        bubble.appendChild(tag);
-      }
+      if (msg.effect === 'rainbow' && bubble._rainbowTimer) clearInterval(bubble._rainbowTimer);
+      bubble.classList.remove('wave-text','flag-text');
+      bubble.innerHTML = '';
+      const txt = document.createTextNode(msg.message);
+      bubble.appendChild(txt);
+      const tag = document.createElement('span'); tag.className = 'effect-tag';
+      tag.textContent = msg.effect.startsWith('flag:') ? msg.effect.replace('flag:','') : msg.effect;
+      tag.onclick = () => replayEffect(bubble, msg.effect);
+      bubble.appendChild(tag);
     }, 5000);
   }
 
@@ -331,8 +326,9 @@ function replayEffect(el, effect) {
     }
     setTimeout(() => { el.classList.remove('wave-text'); el.textContent = el.textContent || ''; }, 5000);
   } else if (effect === 'rainbow') {
-    el.classList.add('rainbow-text');
-    setTimeout(() => el.classList.remove('rainbow-text'), 5000);
+    if (el._rainbowTimer) clearInterval(el._rainbowTimer);
+    applyRainbow(el, el.textContent.replace(/\[.*?\]/g,'').trim());
+    setTimeout(() => { if (el._rainbowTimer) clearInterval(el._rainbowTimer); el.innerHTML = el.textContent; }, 5000);
   } else if (effect && effect.startsWith('flag:')) {
     const fname = effect.replace('flag:', '');
     const cols = flags[fname] || flags.pride;
@@ -340,6 +336,26 @@ function replayEffect(el, effect) {
     el.style.background = `linear-gradient(90deg, ${cols.join(', ')})`;
     setTimeout(() => { el.classList.remove('flag-text'); el.style.background = ''; }, 5000);
   }
+}
+
+const RAINBOW_COLORS = ['#ff0000','#ff8800','#ffff00','#00ff00','#0088ff','#0000ff','#8800ff'];
+function applyRainbow(el, text) {
+  el.innerHTML = '';
+  const spans = [];
+  for (const ch of text) {
+    const sp = document.createElement('span');
+    sp.textContent = ch === ' ' ? '\u00A0' : ch;
+    sp.style.transition = 'color .3s ease';
+    el.appendChild(sp);
+    spans.push(sp);
+  }
+  let offset = 0;
+  el._rainbowTimer = setInterval(() => {
+    for (let i = 0; i < spans.length; i++)
+      spans[i].style.color = RAINBOW_COLORS[(i + offset) % RAINBOW_COLORS.length];
+    offset = (offset + 1) % RAINBOW_COLORS.length;
+  }, 200);
+  applyRainbow._spans = spans;
 }
 
 function scrollToBottom() { messagesEl.scrollTop = messagesEl.scrollHeight; }

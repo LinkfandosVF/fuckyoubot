@@ -9,10 +9,8 @@
 @keyframes glow{0%,100%{box-shadow:0 0 4px rgba(88,166,255,.3)}50%{box-shadow:0 0 12px rgba(88,166,255,.6)}}
 @keyframes badgePop{0%{transform:scale(0)}60%{transform:scale(1.15)}100%{transform:scale(1)}}
 @keyframes wave{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
-@keyframes rainbow{0%{filter:hue-rotate(0deg)}100%{filter:hue-rotate(360deg)}}
 @keyframes flagAnim{0%{background-position:0% 50%}100%{background-position:100% 50%}}
 .wave-text span{display:inline-block;animation:wave .4s ease-in-out infinite}
-.rainbow-text{animation:rainbow 1s linear infinite;color:#f00!important}
 .flag-text{background-size:200% 100%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:flagAnim 3s linear infinite}
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:transparent;font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;overflow:hidden;height:100vh}
@@ -30,7 +28,7 @@ body{background:transparent;font-family:'Segoe UI',-apple-system,BlinkMacSystemF
 .msg .reply-indicator .ru{color:#58a6ff;font-weight:600}
 .msg .time{font-size:11px;color:#484f58;flex-shrink:0}
 .msg .effect-tag{font-size:10px;color:#8b949e;margin-left:4px;cursor:pointer;border-bottom:1px dotted #555}
-@media(prefers-reduced-motion:reduce){.msg{animation:none}.msg .badge{animation:none}.wave-text span{animation:none}.rainbow-text{animation:none}.flag-text{animation:none}}
+@media(prefers-reduced-motion:reduce){.msg{animation:none}.msg .badge{animation:none}.wave-text span{animation:none}.flag-text{animation:none}}
 </style>
 </head>
 <body>
@@ -62,7 +60,7 @@ function stripMeta(text) {
 
 socket.on('history', (msgs) => {
   messagesEl.innerHTML = '';
-  for (const m of msgs.slice(-MAX_VISIBLE)) appendMessage(m, true);
+  for (const m of msgs.slice(-30)) appendMessage(m, true);
 });
 
 socket.on('message', (msg) => {
@@ -82,7 +80,21 @@ function applyEffect(el, effect, text, font) {
       el.appendChild(sp);
     }
   } else if (effect === 'rainbow') {
-    el.innerHTML = `<span class="rainbow-text">${text}</span>`;
+    const RAINBOW_COLORS = ['#ff0000','#ff8800','#ffff00','#00ff00','#0088ff','#0000ff','#8800ff'];
+    el.innerHTML = '';
+    const spans = [];
+    for (const ch of text) {
+      const sp = document.createElement('span');
+      sp.textContent = ch === ' ' ? '\u00A0' : ch;
+      sp.style.transition = 'color .3s ease';
+      el.appendChild(sp); spans.push(sp);
+    }
+    let offset = 0;
+    const timer = setInterval(() => {
+      for (let i = 0; i < spans.length; i++) spans[i].style.color = RAINBOW_COLORS[(i + offset) % RAINBOW_COLORS.length];
+      offset = (offset + 1) % RAINBOW_COLORS.length;
+    }, 200);
+    setTimeout(() => { clearInterval(timer); el.innerHTML = text; }, 5000);
   } else if (effect && effect.startsWith('flag:')) {
     const fname = effect.replace('flag:','');
     const cols = flags[fname] || flags.pride;
