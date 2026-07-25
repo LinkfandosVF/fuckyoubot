@@ -46,6 +46,25 @@ function parseEmotes(text) {
   try { return emotesParser.parse(text); } catch(e) { return text; }
 }
 
+function preParseTwitchEmotes(text, emotes) {
+  if (!emotes) return text;
+  const ranges = [];
+  for (const [id, positions] of Object.entries(emotes)) {
+    for (const pos of positions) {
+      const [start, end] = pos.split('-').map(Number);
+      if (isNaN(start) || isNaN(end)) continue;
+      ranges.push({ start, end: end + 1, id, name: text.slice(start, end + 1) });
+    }
+  }
+  ranges.sort((a, b) => b.start - a.start);
+  let result = text;
+  for (const r of ranges) {
+    const img = `<img alt="${r.name}" title="${r.name}" src="https://static-cdn.jtvnw.net/emoticons/v2/${r.id}/default/dark/1.0" style="vertical-align:middle;width:28px;height:28px;display:inline-block">`;
+    result = result.slice(0, r.start) + img + result.slice(r.end);
+  }
+  return result;
+}
+
 const LINKED_FILE = './linked_accounts.json';
 let linkedAccounts = [];
 function loadLinked() {
@@ -135,7 +154,7 @@ function addMessage(source, username, text, replyTo = null, timestamp = null, co
       if (link.font) displayFont = link.font;
     }
   } catch (e) { console.log('link check error:', e.message); }
-  const msg = { id, source, username: displayName, message: text, timestamp: ts, replyTo, color, effect, font: displayFont, emotes, parsedHtml: parseEmotes(text) };
+  const msg = { id, source, username: displayName, message: text, timestamp: ts, replyTo, color, effect, font: displayFont, emotes, parsedHtml: parseEmotes(preParseTwitchEmotes(text, emotes)) };
   if (linked) msg.linked = true;
   messages.push(msg);
   if (messages.length > 500) messages.shift();
