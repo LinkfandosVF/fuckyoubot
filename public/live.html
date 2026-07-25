@@ -58,6 +58,14 @@ function stripMeta(text) {
   return text.slice(0,s)+text.slice(e+1);
 }
 
+function applyFontStyle(el, f) {
+  const ol = f.ol > 0 ? `${f.ol}px solid ${f.olc}` : 'none';
+  const hasShadow = f.shx || f.shy || f.shb;
+  const sh = hasShadow ? `${f.shx||0}px ${f.shy||0}px ${f.shb||0}px ${f.shc}${f.sho < 100 ? Math.round(f.sho*2.55).toString(16).padStart(2,'0') : ''}` : 'none';
+  el.style.cssText = `font-family:${f.fn};color:${f.fc||'#e6edf3'};-webkit-text-stroke:${ol};text-shadow:${sh}`;
+  el.style.background = f.bg || 'transparent';
+}
+
 function stopEffect(el) {
   if (el._effectTimer) { cancelAnimationFrame(el._effectTimer); el._effectTimer = null; }
 }
@@ -186,16 +194,20 @@ function appendMessage(msg, fromHistory) {
   if (msg.source === 'twitch' && msg.color) user.style.color = msg.color;
   div.appendChild(user);
 
+  if (msg.linked) {
+    const li = document.createElement('span');
+    li.textContent = '⛓';
+    li.style.cssText = 'font-size:11px;opacity:.5;margin-left:2px';
+    div.appendChild(li);
+  }
+
   const text = document.createElement('span');
   text.className = 'text';
   const cleanText = stripMeta(msg.message);
   text.textContent = cleanText;
   div.appendChild(text);
 
-  if (msg.font) {
-    text.style.cssText = `font-family:${msg.font.fn||'inherit'};color:${msg.font.fc||'#e6edf3'};-webkit-text-stroke:${msg.font.ol||'none'};text-shadow:${msg.font.sh||'none'}`;
-    text.style.background = msg.font.bg || 'transparent';
-  }
+  if (msg.font) applyFontStyle(text, msg.font);
 
   const time = document.createElement('span');
   time.className = 'time';
