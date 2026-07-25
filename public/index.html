@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BoneBridge</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#0d1117;color:#e6edf3;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;display:flex;height:100vh}
+  .half{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px;text-align:center;gap:20px}
+  .half:first-child{border-right:1px solid #30363d}
+  h2{font-size:22px;font-weight:700;max-width:380px;line-height:1.4}
+  .desc{font-size:14px;color:#8b949e;max-width:360px;line-height:1.6}
+  .desc li{list-style:none;margin-bottom:6px}
+  .desc li::before{content:'\2192 ';color:#58a6ff}
+  .btn{display:inline-block;padding:12px 28px;border-radius:8px;font-size:15px;font-weight:600;text-decoration:none;cursor:pointer;transition:.2s}
+  .btn-primary{background:#238636;color:#fff}
+  .btn-primary:hover{background:#2ea043}
+  .btn-secondary{background:#21262d;color:#e6edf3;border:1px solid #30363d}
+  .btn-secondary:hover{background:#30363d}
+  code{font-size:13px;background:#161b22;padding:2px 6px;border-radius:4px;color:#58a6ff}
+  hr{width:60px;border:none;border-top:1px solid #30363d;margin:8px 0}
+</style>
+</head>
+<body>
+<div class="half">
+  <h2>I want to use the cool ass chat.</h2>
+  <a href="/chat.html" class="btn btn-primary">Click here</a>
+  <hr>
+  <ul class="desc">
+    <li>Click <strong>Aa</strong> to customize your text</li>
+    <li>Use <code>/wave</code>, <code>/rainbow</code>, <code>/flag &lt;name&gt;</code> commands</li>
+    <li>Click <strong>⛓</strong> to link your Twitch &amp; YouTube accounts</li>
+    <li>Have fun!</li>
+  </ul>
+</div>
+<div class="half">
+  <h2>I'm the big man himself and I want to set it up</h2>
+  <hr>
+  <ul class="desc">
+    <li>Open OBS (<i>obviously</i>)</li>
+    <li>Add a browser source</li>
+    <li>Enter: <code>https://bonebridge.onrender.com/live.html</code></li>
+    <li>Resize it, select <strong>Interact</strong>, click the ⚙ to change settings</li>
+    <li>If the wheel doesn't go away, simply press <strong>spacebar</strong></li>
+  </ul>
+</div>
+</body>
+</html>
