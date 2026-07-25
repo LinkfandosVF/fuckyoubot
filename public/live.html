@@ -112,31 +112,101 @@ const socket = io();
 const messagesEl = document.getElementById('messages');
 const MAX_VISIBLE = 30;
 const emoteMap = new Map();
+let emotesLoaded = false;
+
+function renderTextWithEmotes(text, nativeEmotes) {
+  const nodes = [];
+  const replacements = [];
+  
+  // 1. Pinpoint exact Twitch emotes using the provided indexes
+  if (nativeEmotes) {
+    for (const [id, positions] of Object.entries(nativeEmotes)) {
+      for (const pos of positions) {
+        const [start, end] = pos.split('-').map(Number);
+        replacements.push({
+          start,
+          end: end + 1,
+          url: `https://static-cdn.jtvnw.net/emoticons/v2/${id}/default/dark/1.0`,
+          name: text.substring(start, end + 1)
+        });
+      }
+    }
+  }
+  
+  // Sort them so we parse the string left-to-right properly
+  replacements.sort((a, b) => a.start - b.start);
+  
+  let currentIndex = 0;
+  
+  // Helper to check for 3rd-party emotes in the normal text chunks
+  function parseThirdParty(chunk) {
+    const parts = chunk.split(/(\s+)/);
+    for (const part of parts) {
+      if (!part) continue;
+      const key = part.toLowerCase();
+      if (emoteMap.has(key)) {
+        const img = document.createElement('img');
+        img.src = emoteMap.get(key);
+        img.alt = part;
+        img.style.cssText = 'vertical-align:middle;width:28px;height:28px;display:inline-block';
+        nodes.push(img);
+      } else {
+        nodes.push(document.createTextNode(part));
+      }
+    }
+  }
+
+  // 2. Rebuild the message node by node
+  for (const rep of replacements) {
+    if (rep.start > currentIndex) {
+      parseThirdParty(text.substring(currentIndex, rep.start));
+    }
+    
+    const img = document.createElement('img');
+    img.src = rep.url;
+    img.alt = rep.name;
+    img.style.cssText = 'vertical-align:middle;width:28px;height:28px;display:inline-block';
+    nodes.push(img);
+    
+    currentIndex = rep.end;
+  }
+  
+  if (currentIndex < text.length) {
+    parseThirdParty(text.substring(currentIndex));
+  }
+  
+  return nodes.length ? nodes : [document.createTextNode(text)];
+}
+
+function reRenderEmotes() {
+  document.querySelectorAll('.msg .text').forEach(el => {
+    const txt = el.textContent || el.innerText;
+    el.innerHTML = '';
+    el.append(...renderTextWithEmotes(txt));
+  });
+}
 
 async function loadEmotes() {
-  try {
-    const [ffzGlobal, bttvGlobal] = await Promise.all([
-      fetch('https://api.frankerfacez.com/v1/set/global').then(r=>r.json()).catch(()=>null),
-      fetch('https://api.betterttv.net/3/cached/emotes/global').then(r=>r.json()).catch(()=>null)
-    ]);
-    if (ffzGlobal) {
-      for (const set of Object.values(ffzGlobal.sets || {}))
+  const sources = [
+    fetch('https://api.frankerfacez.com/v1/set/global').then(r=>r.json()).then(d => {
+      for (const set of Object.values(d.sets || {}))
         for (const em of set.emoticons || [])
           emoteMap.set(em.name.toLowerCase(), `https:${em.urls['1']||em.urls['2']||em.urls['4']||''}`);
-    }
-    if (bttvGlobal) {
-      for (const em of bttvGlobal)
+    }).catch(()=>{}),
+    fetch('https://api.betterttv.net/3/cached/emotes/global').then(r=>r.json()).then(d => {
+      for (const em of d || [])
         emoteMap.set(em.code.toLowerCase(), `https://cdn.betterttv.net/emote/${em.id}/2x`);
-    }
-  } catch(e) { console.log('emote load error:', e); }
-  try {
-    const ffzChan = await fetch('https://api.frankerfacez.com/v1/room/mrpemmfub').then(r=>r.json()).catch(()=>null);
-    if (ffzChan && ffzChan.sets) {
-      for (const set of Object.values(ffzChan.sets))
-        for (const em of set.emoticons || [])
-          emoteMap.set(em.name.toLowerCase(), `https:${em.urls['1']||em.urls['2']||em.urls['4']||''}`);
-    }
-  } catch(e) { console.log('ffz channel error:', e); }
+    }).catch(()=>{}),
+    fetch('https://api.frankerfacez.com/v1/room/mrpemmfub').then(r=>r.json()).then(d => {
+      if (d && d.sets)
+        for (const set of Object.values(d.sets))
+          for (const em of set.emoticons || [])
+            emoteMap.set(em.name.toLowerCase(), `https:${em.urls['1']||em.urls['2']||em.urls['4']||''}`);
+    }).catch(()=>{})
+  ];
+  await Promise.all(sources);
+  emotesLoaded = true;
+  reRenderEmotes();
 }
 loadEmotes();
 const EFFECT_DURATION = 5000;
@@ -357,24 +427,6 @@ socket.on('message', (msg) => {
   while (messagesEl.children.length > MAX_VISIBLE) messagesEl.removeChild(messagesEl.firstChild);
 });
 
-function renderTextWithEmotes(text) {
-  const parts = text.split(/(\s+)/);
-  const nodes = [];
-  for (const part of parts) {
-    const key = part.toLowerCase();
-    if (emoteMap.has(key)) {
-      const img = document.createElement('img');
-      img.src = emoteMap.get(key);
-      img.alt = part;
-      img.style.cssText = 'vertical-align:middle;width:28px;height:28px;display:inline-block';
-      nodes.push(img);
-    } else {
-      nodes.push(document.createTextNode(part));
-    }
-  }
-  return nodes.length ? nodes : [document.createTextNode(text)];
-}
-
 function appendMessage(msg, fromHistory) {
   const div = document.createElement('div');
   div.className = 'msg';
@@ -413,7 +465,7 @@ function appendMessage(msg, fromHistory) {
   const text = document.createElement('span');
   text.className = 'text';
   const cleanText = stripMeta(msg.message);
-  const textNodes = renderTextWithEmotes(cleanText);
+  const textNodes = renderTextWithEmotes(cleanText, msg.emotes);
   text.append(...textNodes);
   div.appendChild(text);
 

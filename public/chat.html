@@ -232,6 +232,114 @@ const flags = {
 };
 let filteredCommands = [], selectedCmdIdx = -1;
 let emotes = [];
+const emoteMap = new Map();
+let emotesLoaded = false;
+
+function renderTextWithEmotes(text, nativeEmotes) {
+  const nodes = [];
+  const replacements = [];
+  
+  // 1. Pinpoint exact Twitch emotes using the provided indexes
+  if (nativeEmotes) {
+    for (const [id, positions] of Object.entries(nativeEmotes)) {
+      for (const pos of positions) {
+        const [start, end] = pos.split('-').map(Number);
+        replacements.push({
+          start,
+          end: end + 1,
+          url: `https://static-cdn.jtvnw.net/emoticons/v2/${id}/default/dark/1.0`,
+          name: text.substring(start, end + 1)
+        });
+      }
+    }
+  }
+  
+  // Sort them so we parse the string left-to-right properly
+  replacements.sort((a, b) => a.start - b.start);
+  
+  let currentIndex = 0;
+  
+  // Helper to check for 3rd-party emotes in the normal text chunks
+  function parseThirdParty(chunk) {
+    const parts = chunk.split(/(\s+)/);
+    for (const part of parts) {
+      if (!part) continue;
+      const key = part.toLowerCase();
+      if (emoteMap.has(key)) {
+        const img = document.createElement('img');
+        img.src = emoteMap.get(key);
+        img.alt = part;
+        img.style.cssText = 'vertical-align:middle;width:28px;height:28px;display:inline-block';
+        nodes.push(img);
+      } else {
+        nodes.push(document.createTextNode(part));
+      }
+    }
+  }
+
+  // 2. Rebuild the message node by node
+  for (const rep of replacements) {
+    if (rep.start > currentIndex) {
+      parseThirdParty(text.substring(currentIndex, rep.start));
+    }
+    
+    const img = document.createElement('img');
+    img.src = rep.url;
+    img.alt = rep.name;
+    img.style.cssText = 'vertical-align:middle;width:28px;height:28px;display:inline-block';
+    nodes.push(img);
+    
+    currentIndex = rep.end;
+  }
+  
+  if (currentIndex < text.length) {
+    parseThirdParty(text.substring(currentIndex));
+  }
+  
+  return nodes.length ? nodes : [document.createTextNode(text)];
+}
+
+function reRenderEmotes() {
+  document.querySelectorAll('.bubble').forEach(el => {
+    if (el.dataset.effect) return;
+    const txt = el.textContent || el.innerText;
+    el.innerHTML = '';
+    el.append(...renderTextWithEmotes(txt));
+  });
+}
+
+async function loadEmotes() {
+  const sources = [
+    fetch('https://api.frankerfacez.com/v1/set/global').then(r=>r.json()).then(d => {
+      for (const set of Object.values(d.sets || {}))
+        for (const em of set.emoticons || []) {
+          const url = `https:${em.urls['1']||em.urls['2']||em.urls['4']||''}`;
+          emoteMap.set(em.name.toLowerCase(), url);
+          emotes.push({name:em.name, url});
+        }
+    }).catch(()=>{}),
+    fetch('https://api.betterttv.net/3/cached/emotes/global').then(r=>r.json()).then(d => {
+      for (const em of d || []) {
+        emoteMap.set(em.code.toLowerCase(), `https://cdn.betterttv.net/emote/${em.id}/2x`);
+        emotes.push({name:em.code, url:`https://cdn.betterttv.net/emote/${em.id}/2x`});
+      }
+    }).catch(()=>{}),
+    fetch('https://api.frankerfacez.com/v1/room/mrpemmfub').then(r=>r.json()).then(d => {
+      if (d && d.sets)
+        for (const set of Object.values(d.sets))
+          for (const em of set.emoticons || []) {
+            const url = `https:${em.urls['1']||em.urls['2']||em.urls['4']||''}`;
+            emoteMap.set(em.name.toLowerCase(), url);
+            emotes.push({name:em.name, url});
+          }
+    }).catch(()=>{})
+  ];
+  await Promise.all(sources);
+  emotesLoaded = true;
+  reRenderEmotes();
+}
+loadEmotes();
+
 const DEFAULT_FONT = {fn:'Arial',fc:'#e6edf3',bg:'#21262d',ol:0,olc:'#000000',shx:0,shy:0,shb:0,shc:'#000000',sho:0};
 let fontSettings = (() => {
   const raw = localStorage.getItem('font');
@@ -396,43 +504,6 @@ document.getElementById('reset-font').onclick = () => {
   document.getElementById('font-sho-val').textContent = fontSettings.sho + '%';
 })();
 
-const emoteMap = new Map();
-
-async function loadEmotes() {
-  try {
-    const [ffzGlobal, bttvGlobal] = await Promise.all([
-      fetch('https://api.frankerfacez.com/v1/set/global').then(r=>r.json()).catch(()=>null),
-      fetch('https://api.betterttv.net/3/cached/emotes/global').then(r=>r.json()).catch(()=>null)
-    ]);
-    if (ffzGlobal) {
-      for (const set of Object.values(ffzGlobal.sets || {}))
-        for (const em of set.emoticons || []) {
-          const url = `https:${em.urls['1']||em.urls['2']||em.urls['4']||''}`;
-          emoteMap.set(em.name.toLowerCase(), url);
-          emotes.push({name:em.name, url});
-        }
-    }
-    if (bttvGlobal) {
-      for (const em of bttvGlobal) {
-        emoteMap.set(em.code.toLowerCase(), `https://cdn.betterttv.net/emote/${em.id}/2x`);
-        emotes.push({name:em.code, url:`https://cdn.betterttv.net/emote/${em.id}/2x`});
-      }
-    }
-  } catch(e) { console.log('emote load error:', e); }
-  try {
-    const ffzChan = await fetch('https://api.frankerfacez.com/v1/room/mrpemmfub').then(r=>r.json()).catch(()=>null);
-    if (ffzChan && ffzChan.sets) {
-      for (const set of Object.values(ffzChan.sets))
-        for (const em of set.emoticons || []) {
-          const url = `https:${em.urls['1']||em.urls['2']||em.urls['4']||''}`;
-          emoteMap.set(em.name.toLowerCase(), url);
-          emotes.push({name:em.name, url});
-        }
-    }
-  } catch(e) { console.log('ffz channel error:', e); }
-}
-loadEmotes();
-
 socket.on('connect', () => statusDot.className = 'status-dot connected');
 socket.on('disconnect', () => statusDot.className = 'status-dot disconnected');
 socket.on('nickChanged', (nick) => { username = nick; nickDisplay.textContent = nick; localStorage.setItem('nick', nick); });
@@ -448,7 +519,22 @@ socket.on('message', (msg) => { appendMessage(msg, true); });
 const EFFECT_DURATION = 5000;
 const FADE_DURATION = 1000;
 
-function renderTextWithEmotes(text) {
+function renderTextWithEmotes(text, nativeEmotes) {
+  // 1. Dynamically extract native Twitch emotes and add them to the map
+  if (nativeEmotes) {
+    for (const [id, positions] of Object.entries(nativeEmotes)) {
+      if (positions.length > 0) {
+        // Grab the start and end index of the emote's first occurrence
+        const [start, end] = positions[0].split('-').map(Number);
+        const emoteName = text.substring(start, end + 1);
+        
+        // Map the extracted name to Twitch's official v2 emote CDN
+        emoteMap.set(emoteName.toLowerCase(), `https://static-cdn.jtvnw.net/emoticons/v2/${id}/default/dark/1.0`);
+      }
+    }
+  }
+
+  // 2. Your existing rendering logic
   const parts = text.split(/(\s+)/);
   const nodes = [];
   for (const part of parts) {
@@ -457,6 +543,7 @@ function renderTextWithEmotes(text) {
       const img = document.createElement('img');
       img.src = emoteMap.get(key);
       img.alt = part;
+      img.title = part; // Optional: adds a hover tooltip for accessibility 
       img.style.cssText = 'vertical-align:middle;width:28px;height:28px;display:inline-block';
       nodes.push(img);
     } else {
@@ -522,6 +609,11 @@ function appendMessage(msg, scroll) {
       bubble.dataset.effect = msg.effect;
       applyFlag(bubble, msg.message, msg.effect.replace('flag:', ''));
     }
+    else {
+    // Pass msg.emotes here so the function can parse native Twitch emotes
+    const textNodes = renderTextWithEmotes(msg.message, msg.emotes);
+    bubble.append(...textNodes);
+  }
     const tag = document.createElement('span');
     tag.className = 'effect-tag';
     tag.textContent = msg.effect.startsWith('flag:') ? msg.effect.replace('flag:','') : msg.effect;
