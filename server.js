@@ -172,15 +172,7 @@ twitchReader.connect().catch(e => console.log('Twitch reader:', e.message));
 twitchReader.on('connected', () => console.log('Twitch reader connected - listening to', TWITCH_CHANNEL));
 twitchReader.on('message', (channel, tags, message) => {
   const ts = tags['tmi-sent-ts'] ? parseInt(tags['tmi-sent-ts']) : null;
-  let parsedEmotes = null;
-  if (tags.emotes) {
-    parsedEmotes = {};
-    for (const part of tags.emotes.split('/')) {
-      const [id, poses] = part.split(':');
-      if (id && poses) parsedEmotes[id] = poses.split(',');
-    }
-  }
-  addMessage('twitch', tags['display-name'] || tags.username, message, null, ts, tags.color || null, null, null, parsedEmotes);
+  addMessage('twitch', tags['display-name'] || tags.username, message, null, ts, tags.color || null, null, null, tags.emotes || null);
 });
 
 let twitchWriter = null;
