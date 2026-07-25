@@ -88,24 +88,26 @@ function addMessage(source, username, text, replyTo = null, timestamp = null) {
 const TWITCH_BOT_USERNAME = process.env.TWITCH_BOT_USERNAME || '';
 const TWITCH_BOT_OAUTH = process.env.TWITCH_BOT_OAUTH || '';
 
-const twitchClient = new tmi.Client({
-  channels: [TWITCH_CHANNEL.toLowerCase()],
-  connection: { reconnect: true, secure: true },
-  identity: TWITCH_BOT_USERNAME && TWITCH_BOT_OAUTH ? { username: TWITCH_BOT_USERNAME, password: TWITCH_BOT_OAUTH } : undefined
-});
-console.log('Twitch bot:', TWITCH_BOT_USERNAME || 'none', '| token:', TWITCH_BOT_OAUTH ? 'set (' + TWITCH_BOT_OAUTH.slice(0, 10) + '...)' : 'none');
-twitchClient.connect().catch(e => console.log('Twitch connect error:', e ? e.message || e : 'unknown'));
-twitchClient.on('connected', () => console.log('Twitch connected'));
-twitchClient.on('logon', () => console.log('Twitch logged in'));
-twitchClient.on('message', (channel, tags, message) => {
+const twitchReader = new tmi.Client({ channels: [TWITCH_CHANNEL.toLowerCase()], connection: { reconnect: true, secure: true } });
+twitchReader.connect().catch(e => console.log('Twitch reader:', e.message));
+twitchReader.on('connected', () => console.log('Twitch reader connected'));
+twitchReader.on('message', (channel, tags, message) => {
   const ts = tags['tmi-sent-ts'] ? parseInt(tags['tmi-sent-ts']) : null;
   addMessage('twitch', tags['display-name'] || tags.username, message, null, ts);
 });
 
+let twitchWriter = null;
+if (TWITCH_BOT_USERNAME && TWITCH_BOT_OAUTH) {
+  twitchWriter = new tmi.Client({ channels: [TWITCH_CHANNEL.toLowerCase()], connection: { reconnect: true, secure: true }, identity: { username: TWITCH_BOT_USERNAME, password: TWITCH_BOT_OAUTH } });
+  twitchWriter.connect().catch(e => console.log('Twitch writer:', e.message));
+  twitchWriter.on('connected', () => console.log('Twitch writer connected'));
+  console.log('Twitch bot enabled:', TWITCH_BOT_USERNAME);
+} else console.log('Twitch bot: none (read-only)');
+
 function sendToTwitch(source, username, text) {
-  if (source === 'twitch' || !TWITCH_BOT_USERNAME || !TWITCH_BOT_OAUTH) return;
+  if (source === 'twitch' || !twitchWriter) return;
   const prefix = source === 'youtube' ? 'YT' : 'Chat';
-  twitchClient.say(TWITCH_CHANNEL.toLowerCase(), `[${prefix}] ${username}: ${text}`).catch(e => console.log('Twitch say error:', e ? e.message || e : 'unknown'));
+  twitchWriter.say(TWITCH_CHANNEL.toLowerCase(), `[${prefix}] ${username}: ${text}`).catch(e => console.log('Twitch say:', e.message));
 }
 
 let ytInterval = null;
