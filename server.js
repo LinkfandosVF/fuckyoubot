@@ -90,7 +90,7 @@ const TWITCH_BOT_OAUTH = process.env.TWITCH_BOT_OAUTH || '';
 
 const twitchReader = new tmi.Client({ channels: [TWITCH_CHANNEL.toLowerCase()], connection: { reconnect: true, secure: true } });
 twitchReader.connect().catch(e => console.log('Twitch reader:', e.message));
-twitchReader.on('connected', () => console.log('Twitch reader connected'));
+twitchReader.on('connected', () => console.log('Twitch reader connected - listening to', TWITCH_CHANNEL));
 twitchReader.on('message', (channel, tags, message) => {
   const ts = tags['tmi-sent-ts'] ? parseInt(tags['tmi-sent-ts']) : null;
   addMessage('twitch', tags['display-name'] || tags.username, message, null, ts);
@@ -139,7 +139,9 @@ async function checkYTLive() {
     try {
       const initRes = await axios.get('https://www.googleapis.com/youtube/v3/liveChat/messages', { params: { part: 'snippet,authorDetails', liveChatId: ytLiveChatId, key: YOUTUBE_API_KEY } });
       ytNextPage = initRes.data.nextPageToken || '';
-      for (const item of initRes.data.items || []) addMessage('youtube', item.authorDetails.displayName, item.snippet.displayMessage, null, new Date(item.snippet.publishedAt).getTime());
+      const items = (initRes.data.items || []).slice(-10);
+      for (const item of items) addMessage('youtube', item.authorDetails.displayName, item.snippet.displayMessage, null, new Date(item.snippet.publishedAt).getTime());
+      console.log('YouTube backfill:', items.length, 'messages');
     } catch {}
 
     if (ytPollTimer) clearInterval(ytPollTimer);
