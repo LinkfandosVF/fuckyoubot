@@ -175,7 +175,8 @@ function appendMessage(msg, fromHistory) {
   if (msg.replyTo) {
     const ri = document.createElement('span');
     ri.className = 'reply-indicator';
-    ri.innerHTML = `<span class="ru">${msg.replyTo.username}</span>`;
+    const preview = msg.replyTo.message.length > 40 ? msg.replyTo.message.slice(0,40) + '...' : msg.replyTo.message;
+    ri.innerHTML = `<span class="ru">${msg.replyTo.username}</span>: ${preview}`;
     div.appendChild(ri);
   }
 

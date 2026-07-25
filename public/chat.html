@@ -431,7 +431,8 @@ function appendMessage(msg, scroll) {
   if (msg.replyTo) {
     const rp = document.createElement('span');
     rp.className = 'reply-indicator';
-    rp.textContent = `↩ ${msg.replyTo.username}`;
+    const preview = msg.replyTo.message.length > 30 ? msg.replyTo.message.slice(0,30) + '...' : msg.replyTo.message;
+    rp.textContent = `↩ ${msg.replyTo.username}: ${preview}`;
     rp.title = msg.replyTo.message;
     userRow.appendChild(rp);
   }
