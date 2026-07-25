@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chat</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0d1117; color: #e6edf3; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; display: flex; flex-direction: column; height: 100vh; }
+#messages { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 4px; }
+.msg { display: flex; align-items: flex-start; gap: 8px; padding: 6px 8px; border-radius: 6px; transition: background .15s; font-size: 14px; line-height: 1.4; }
+.msg:hover { background: #161b22; }
+.msg .badge { font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 4px; text-transform: uppercase; flex-shrink: 0; margin-top: 2px; }
+.badge-twitch { background: #9147ff; color: #fff; }
+.badge-youtube { background: #ff0033; color: #fff; }
+.badge-discord { background: #5865f2; color: #fff; }
+.badge-custom { background: #238636; color: #fff; }
+.msg .user { font-weight: 600; color: #58a6ff; margin-right: 4px; flex-shrink: 0; }
+.msg .text { word-break: break-word; flex: 1; }
+.msg .reply-indicator { color: #8b949e; font-size: 12px; cursor: pointer; margin-right: 4px; }
+.msg .reply-indicator:hover { color: #58a6ff; }
+.msg .reply-btn { opacity: 0; cursor: pointer; color: #8b949e; font-size: 12px; flex-shrink: 0; padding: 0 4px; transition: opacity .15s; }
+.msg:hover .reply-btn { opacity: 1; }
+.msg .reply-btn:hover { color: #58a6ff; }
+.msg .time { font-size: 11px; color: #484f58; flex-shrink: 0; }
+#reply-bar { display: none; align-items: center; gap: 8px; padding: 6px 12px; background: #161b22; border-top: 1px solid #30363d; font-size: 13px; color: #8b949e; }
+#reply-bar.show { display: flex; }
+#reply-bar .reply-to { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#reply-bar .reply-to strong { color: #58a6ff; }
+#reply-bar #cancel-reply { background: none; border: none; color: #8b949e; cursor: pointer; font-size: 18px; padding: 0 4px; }
+#reply-bar #cancel-reply:hover { color: #f85149; }
+#input-area { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-top: 1px solid #30363d; background: #0d1117; position: relative; }
+#source-select { background: #21262d; color: #e6edf3; border: 1px solid #30363d; border-radius: 6px; padding: 6px 8px; font-size: 13px; cursor: pointer; outline: none; }
+#msg-input { flex: 1; background: #21262d; border: 1px solid #30363d; border-radius: 6px; padding: 8px 12px; color: #e6edf3; font-size: 14px; outline: none; }
+#msg-input:focus { border-color: #58a6ff; }
+#send-btn { background: #238636; color: #fff; border: none; border-radius: 6px; padding: 8px 16px; font-size: 14px; font-weight: 600; cursor: pointer; }
+#send-btn:hover { background: #2ea043; }
+#autocomplete { display: none; position: absolute; bottom: 100%; left: 12px; background: #161b22; border: 1px solid #30363d; border-radius: 6px; overflow: hidden; min-width: 200px; box-shadow: 0 4px 12px rgba(0,0,0,.4); }
+#autocomplete.show { display: block; }
+#autocomplete .item { padding: 8px 12px; cursor: pointer; font-size: 13px; }
+#autocomplete .item:hover, #autocomplete .item.active { background: #21262d; }
+#autocomplete .item .cmd { font-weight: 600; color: #58a6ff; }
+#autocomplete .item .desc { color: #8b949e; margin-left: 8px; }
+.status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+.status-dot.connected { background: #3fb950; }
+.status-dot.disconnected { background: #f85149; }
+#header { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: #161b22; border-bottom: 1px solid #30363d; }
+#header h1 { font-size: 16px; }
+#nick-display { font-size: 13px; color: #8b949e; }
+</style>
+</head>
+<body>
+<div id="header">
+  <h1>Chat</h1>
+  <div id="nick-display"><span class="status-dot connected" id="status-dot"></span><span id="current-nick">User</span></div>
+</div>
+<div id="messages"></div>
+<div id="reply-bar">
+  <span class="reply-to">Replying to <strong id="reply-user"></strong>: <span id="reply-text"></span></span>
+  <button id="cancel-reply">&times;</button>
+</div>
+<div id="input-area">
+  <select id="source-select">
+    <option value="discord">Discord</option>
+    <option value="custom">Custom</option>
+  </select>
+  <input id="msg-input" type="text" placeholder="Type a message..." autocomplete="off">
+  <button id="send-btn">Send</button>
+  <div id="autocomplete"></div>
+</div>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const socket = io();
+let username = 'User';
+let currentReply = null;
+const commands = [{ cmd: '/nick', desc: 'Change username', args: '<username>' }];
+let filteredCommands = [];
+let selectedCmdIdx = -1;
+
+const messagesEl = document.getElementById('messages');
+const input = document.getElementById('msg-input');
+const sendBtn = document.getElementById('send-btn');
+const replyBar = document.getElementById('reply-bar');
+const replyUser = document.getElementById('reply-user');
+const replyText = document.getElementById('reply-text');
+const cancelReply = document.getElementById('cancel-reply');
+const autocomplete = document.getElementById('autocomplete');
+const nickDisplay = document.getElementById('current-nick');
+const sourceSelect = document.getElementById('source-select');
+const statusDot = document.getElementById('status-dot');
+
+socket.on('connect', () => statusDot.className = 'status-dot connected');
+socket.on('disconnect', () => statusDot.className = 'status-dot disconnected');
+socket.on('nickChanged', (nick) => { username = nick; nickDisplay.textContent = nick; });
+
+socket.on('history', (msgs) => {
+  messagesEl.innerHTML = '';
+  for (const m of msgs) appendMessage(m, false);
+  scrollToBottom();
+});
+
+socket.on('message', (msg) => {
+  appendMessage(msg, true);
+});
+
+function appendMessage(msg, scroll) {
+  const div = document.createElement('div');
+  div.className = 'msg';
+  div.dataset.id = msg.id;
+  div.dataset.source = msg.source;
+  div.dataset.username = msg.username;
+  div.dataset.message = msg.message;
+
+  const badge = document.createElement('span');
+  badge.className = `badge badge-${msg.source}`;
+  badge.textContent = msg.source;
+  div.appendChild(badge);
+
+  const time = document.createElement('span');
+  time.className = 'time';
+  const d = new Date(msg.timestamp);
+  time.textContent = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  time.title = d.toLocaleString();
+
+  if (msg.replyTo) {
+    const rp = document.createElement('span');
+    rp.className = 'reply-indicator';
+    rp.textContent = `↩ ${msg.replyTo.username}`;
+    rp.title = msg.replyTo.message;
+    div.appendChild(rp);
+  }
+
+  const user = document.createElement('span');
+  user.className = 'user';
+  user.textContent = msg.username + ':';
+  div.appendChild(user);
+
+  const text = document.createElement('span');
+  text.className = 'text';
+  text.textContent = msg.message;
+  div.appendChild(text);
+
+  div.appendChild(time);
+
+  const rb = document.createElement('span');
+  rb.className = 'reply-btn';
+  rb.textContent = '↩';
+  rb.onclick = () => setReply(msg);
+  div.appendChild(rb);
+
+  messagesEl.appendChild(div);
+  if (scroll) scrollToBottom();
+}
+
+function addSystemMsg(text) {
+  const div = document.createElement('div');
+  div.style.cssText = 'text-align:center;color:#8b949e;font-size:12px;padding:4px 0;font-style:italic;';
+  div.textContent = text;
+  messagesEl.appendChild(div);
+  scrollToBottom();
+  setTimeout(() => { if (div.parentNode) div.remove(); }, 4000);
+}
+
+function scrollToBottom() {
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+function setReply(msg) {
+  currentReply = msg;
+  replyUser.textContent = msg.username;
+  replyText.textContent = msg.message.length > 80 ? msg.message.slice(0, 80) + '...' : msg.message;
+  replyBar.classList.add('show');
+  input.focus();
+}
+
+cancelReply.onclick = () => {
+  currentReply = null;
+  replyBar.classList.remove('show');
+};
+
+function sendMessage() {
+  const text = input.value.trim();
+  if (!text) return;
+
+  if (text.startsWith('/')) {
+    const parts = text.split(' ');
+    const cmd = parts[0].toLowerCase();
+    if (cmd === '/nick') {
+      if (parts[1]) {
+        username = parts[1];
+        nickDisplay.textContent = username;
+        socket.emit('command', { command: 'nick', args: username });
+        addSystemMsg(`Nick changed to ${username}`);
+      } else {
+        addSystemMsg('Usage: /nick <username>');
+      }
+      input.value = '';
+      hideAutocomplete();
+      return;
+    }
+    addSystemMsg(`Unknown command: ${cmd}`);
+    input.value = '';
+    hideAutocomplete();
+    return;
+  }
+
+  const source = sourceSelect.value;
+  socket.emit('sendMessage', { username, message: text, replyTo: currentReply || undefined, source });
+  input.value = '';
+  currentReply = null;
+  replyBar.classList.remove('show');
+  hideAutocomplete();
+}
+
+sendBtn.onclick = sendMessage;
+input.onkeydown = (e) => {
+  if (e.key === 'Enter' && !autocomplete.classList.contains('show')) {
+    sendMessage();
+  } else if (e.key === 'Tab' && autocomplete.classList.contains('show')) {
+    e.preventDefault();
+    completeCommand();
+  } else if (e.key === 'ArrowDown' && autocomplete.classList.contains('show')) {
+    e.preventDefault();
+    selectedCmdIdx = Math.min(selectedCmdIdx + 1, filteredCommands.length - 1);
+    updateAutocompleteSelection();
+  } else if (e.key === 'ArrowUp' && autocomplete.classList.contains('show')) {
+    e.preventDefault();
+    selectedCmdIdx = Math.max(selectedCmdIdx - 1, 0);
+    updateAutocompleteSelection();
+  } else if (e.key === 'Escape') {
+    hideAutocomplete();
+  }
+};
+
+input.oninput = () => {
+  const text = input.value;
+  const cursorPos = input.selectionStart;
+  const beforeCursor = text.slice(0, cursorPos);
+
+  if (beforeCursor.startsWith('/')) {
+    const parts = beforeCursor.split(' ');
+    if (parts.length === 1) {
+      const partial = parts[0].toLowerCase();
+      filteredCommands = commands.filter(c => c.cmd.startsWith(partial));
+      if (filteredCommands.length > 0) {
+        showAutocomplete(filteredCommands);
+        selectedCmdIdx = 0;
+        updateAutocompleteSelection();
+      } else {
+        hideAutocomplete();
+      }
+    } else {
+      hideAutocomplete();
+    }
+  } else {
+    hideAutocomplete();
+  }
+};
+
+function showAutocomplete(cmds) {
+  autocomplete.innerHTML = '';
+  autocomplete.classList.add('show');
+  for (const c of cmds) {
+    const item = document.createElement('div');
+    item.className = 'item';
+    item.innerHTML = `<span class="cmd">${c.cmd}</span><span class="desc">${c.desc}</span>`;
+    item.onclick = () => {
+      input.value = c.cmd + ' ';
+      input.focus();
+      hideAutocomplete();
+    };
+    autocomplete.appendChild(item);
+  }
+}
+
+function hideAutocomplete() {
+  autocomplete.classList.remove('show');
+  autocomplete.innerHTML = '';
+  selectedCmdIdx = -1;
+}
+
+function updateAutocompleteSelection() {
+  const items = autocomplete.querySelectorAll('.item');
+  items.forEach((el, i) => el.classList.toggle('active', i === selectedCmdIdx));
+}
+
+function completeCommand() {
+  if (filteredCommands.length === 0) return;
+  const cmd = filteredCommands[selectedCmdIdx >= 0 ? selectedCmdIdx : 0];
+  input.value = cmd.cmd + ' ';
+  input.focus();
+  hideAutocomplete();
+}
+</script>
+</body>
+</html>
