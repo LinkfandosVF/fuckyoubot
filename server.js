@@ -95,7 +95,7 @@ async function sendToDiscord(source, username, text, replyTo, timestamp, color, 
   catch (e) { console.log('Discord webhook failed:', e.message); }
 }
 
-function addMessage(source, username, text, replyTo = null, timestamp = null, color = null, effect = null, font = null) {
+function addMessage(source, username, text, replyTo = null, timestamp = null, color = null, effect = null, font = null, emotes = null) {
   const id = ++msgId;
   const ts = timestamp || Date.now();
   let displayName = username;
@@ -109,7 +109,7 @@ function addMessage(source, username, text, replyTo = null, timestamp = null, co
       if (link.font) displayFont = link.font;
     }
   } catch (e) { console.log('link check error:', e.message); }
-  const msg = { id, source, username: displayName, message: text, timestamp: ts, replyTo, color, effect, font: displayFont };
+  const msg = { id, source, username: displayName, message: text, timestamp: ts, replyTo, color, effect, font: displayFont, emotes };
   if (linked) msg.linked = true;
   messages.push(msg);
   if (messages.length > 500) messages.shift();
@@ -126,7 +126,7 @@ twitchReader.connect().catch(e => console.log('Twitch reader:', e.message));
 twitchReader.on('connected', () => console.log('Twitch reader connected - listening to', TWITCH_CHANNEL));
 twitchReader.on('message', (channel, tags, message) => {
   const ts = tags['tmi-sent-ts'] ? parseInt(tags['tmi-sent-ts']) : null;
-  addMessage('twitch', tags['display-name'] || tags.username, message, null, ts, tags.color || null);
+  addMessage('twitch', tags['display-name'] || tags.username, message, null, ts, tags.color || null, null, null, tags.emotes || null);
 });
 
 let twitchWriter = null;

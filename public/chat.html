@@ -416,6 +416,33 @@ socket.on('message', (msg) => { appendMessage(msg, true); });
 const EFFECT_DURATION = 5000;
 const FADE_DURATION = 1000;
 
+function renderTextWithEmotes(text, emotes) {
+  if (!emotes || typeof emotes !== 'object') return [document.createTextNode(text)];
+  const ranges = [];
+  for (const id in emotes) {
+    if (!Object.prototype.hasOwnProperty.call(emotes, id)) continue;
+    for (const pos of emotes[id]) {
+      const [s, e] = pos.split('-').map(Number);
+      ranges.push({ start: s, end: e, id });
+    }
+  }
+  ranges.sort((a, b) => a.start - b.start);
+  const nodes = [];
+  let last = 0;
+  for (const r of ranges) {
+    if (r.start < last) continue;
+    if (r.start > last) nodes.push(document.createTextNode(text.slice(last, r.start)));
+    const img = document.createElement('img');
+    img.src = `https://static-cdn.jtvnw.net/emoticons/v2/${r.id}/default/dark/2.0`;
+    img.alt = text.slice(r.start, r.end + 1);
+    img.style.cssText = 'vertical-align:middle;width:28px;height:28px;display:inline-block';
+    nodes.push(img);
+    last = r.end + 1;
+  }
+  if (last < text.length) nodes.push(document.createTextNode(text.slice(last)));
+  return nodes.length ? nodes : [document.createTextNode(text)];
+}
+
 function appendMessage(msg, scroll) {
   const div = document.createElement('div');
   div.className = 'msg own';
@@ -478,7 +505,8 @@ function appendMessage(msg, scroll) {
     tag.onclick = () => replayEffect(bubble, msg.effect, msg.message);
     bubble.appendChild(tag);
   } else {
-    bubble.textContent = msg.message;
+    const textNodes = renderTextWithEmotes(msg.message, msg.emotes);
+    bubble.append(...textNodes);
   }
 
   if (msg.font) applyFontStyle(bubble, msg.font);

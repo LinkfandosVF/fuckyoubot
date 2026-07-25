@@ -329,6 +329,33 @@ socket.on('message', (msg) => {
   while (messagesEl.children.length > MAX_VISIBLE) messagesEl.removeChild(messagesEl.firstChild);
 });
 
+function renderTextWithEmotes(text, emotes) {
+  if (!emotes || typeof emotes !== 'object') return [document.createTextNode(text)];
+  const ranges = [];
+  for (const id in emotes) {
+    if (!Object.prototype.hasOwnProperty.call(emotes, id)) continue;
+    for (const pos of emotes[id]) {
+      const [s, e] = pos.split('-').map(Number);
+      ranges.push({ start: s, end: e, id });
+    }
+  }
+  ranges.sort((a, b) => a.start - b.start);
+  const nodes = [];
+  let last = 0;
+  for (const r of ranges) {
+    if (r.start < last) continue;
+    if (r.start > last) nodes.push(document.createTextNode(text.slice(last, r.start)));
+    const img = document.createElement('img');
+    img.src = `https://static-cdn.jtvnw.net/emoticons/v2/${r.id}/default/dark/2.0`;
+    img.alt = text.slice(r.start, r.end + 1);
+    img.style.cssText = 'vertical-align:middle;width:28px;height:28px;display:inline-block';
+    nodes.push(img);
+    last = r.end + 1;
+  }
+  if (last < text.length) nodes.push(document.createTextNode(text.slice(last)));
+  return nodes.length ? nodes : [document.createTextNode(text)];
+}
+
 function appendMessage(msg, fromHistory) {
   const div = document.createElement('div');
   div.className = 'msg';
@@ -367,7 +394,8 @@ function appendMessage(msg, fromHistory) {
   const text = document.createElement('span');
   text.className = 'text';
   const cleanText = stripMeta(msg.message);
-  text.textContent = cleanText;
+  const textNodes = renderTextWithEmotes(cleanText, msg.emotes);
+  text.append(...textNodes);
   div.appendChild(text);
 
   if (msg.font && settings.fonts) applyFontStyle(text, msg.font);
