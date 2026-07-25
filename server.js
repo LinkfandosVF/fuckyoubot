@@ -76,7 +76,6 @@ async function sendToDiscord(source, username, text, replyTo, timestamp, color, 
   const meta = { u: username, s: source, t: ts * 1000 };
   if (color) meta.c = color;
   if (effect) meta.e = effect;
-  if (font) meta.f = font;
 
   let effectTag = '';
   if (effect === 'wave') effectTag = ' [wave]';
