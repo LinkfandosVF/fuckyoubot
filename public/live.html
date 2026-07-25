@@ -7,7 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&family=Silkscreen&family=Pixelify+Sans&family=DotGothic16&display=swap" rel="stylesheet">
 <style>
 @keyframes slideIn{0%{opacity:0;transform:translateY(20px) scale(.97)}100%{opacity:1;transform:translateY(0) scale(1)}}
-@keyframes glow{0%,100%{box-shadow:0 0 4px rgba(88,166,255,.3)}50%{box-shadow:0 0 12px rgba(88,166,255,.6)}}
+@keyframes fadeOut{0%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-10px) scale(.95)}}
 @keyframes badgePop{0%{transform:scale(0)}60%{transform:scale(1.15)}100%{transform:scale(1)}}
 @keyframes flagAnim{0%{background-position:0% 50%}100%{background-position:100% 50%}}
 @keyframes panelSlide{0%{transform:translateX(100%)}100%{transform:translateX(0)}}
@@ -15,7 +15,7 @@
 *{margin:0;padding:0;box-sizing:border-box}:root{--text-size:14px}
 body{background:transparent;font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;overflow:hidden;height:100vh;transition:background .3s}
 #messages{display:flex;flex-direction:column;gap:6px;padding:16px;height:100vh;overflow:hidden;justify-content:flex-end}
-.msg{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:10px;background:rgba(13,17,23,0.75);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(48,54,61,0.5);animation:slideIn .4s cubic-bezier(.16,1,.3,1) forwards,glow 3s ease-in-out .4s infinite;transition:border-radius .3s,background .3s}
+.msg{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:10px;background:rgba(13,17,23,0.75);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(48,54,61,0.5);animation:slideIn .4s cubic-bezier(.16,1,.3,1) forwards;transition:border-radius .3s,background .3s}
 .msg .user{font-weight:700;font-size:var(--text-size);flex-shrink:0}
 .msg .text{font-size:var(--text-size);color:#e6edf3;word-break:break-word;flex:1;line-height:1.4}
 .msg .reply-indicator{font-size:calc(var(--text-size) * 0.85);color:#8b949e;display:flex;align-items:center;gap:4px;flex-shrink:0}
@@ -153,7 +153,6 @@ function applySettings() {
     el.style.borderRadius = document.documentElement.style.getPropertyValue('--bubble-radius');
     el.style.border = settings.showBubbleBg ? '1px solid rgba(48,54,61,0.5)' : 'none';
     el.style.boxShadow = settings.showBubbleBg ? '' : 'none';
-    if (!settings.showBubbleBg) el.style.animation = 'slideIn .4s cubic-bezier(.16,1,.3,1) forwards';
     if (settings.noAnim || !settings.showBubbleBg) el.style.animation = 'none';
     el.querySelectorAll('.badge').forEach(b => b.style.display = settings.badges ? '' : 'none');
     el.querySelectorAll('.time').forEach(t => t.style.display = settings.showTime ? '' : 'none');
@@ -357,7 +356,11 @@ function appendMessage(msg, fromHistory) {
     setTimeout(() => div.scrollIntoView({ behavior:'smooth', block:'end' }), 50);
   }
   if (settings.msgLife > 0) {
-    div._timeout = setTimeout(() => { if (div.parentNode) div.remove(); }, settings.msgLife * 1000);
+    div._timeout = setTimeout(() => {
+      div.style.animation = 'fadeOut .5s cubic-bezier(.16,1,.3,1) forwards';
+      div._fading = true;
+      setTimeout(() => { if (div.parentNode) div.remove(); }, 550);
+    }, settings.msgLife * 1000);
   }
 }
 
@@ -415,7 +418,14 @@ document.getElementById('s-text-size').oninput = function() {
 document.getElementById('s-msg-life').onchange = function() {
   document.querySelectorAll('.msg').forEach(el => {
     if (el._timeout) clearTimeout(el._timeout);
-    if (+this.value > 0) el._timeout = setTimeout(() => { if (el.parentNode) el.remove(); }, +this.value * 1000);
+    if (el._fading) return;
+    if (+this.value > 0) {
+      el._timeout = setTimeout(() => {
+        el.style.animation = 'fadeOut .5s cubic-bezier(.16,1,.3,1) forwards';
+        el._fading = true;
+        setTimeout(() => { if (el.parentNode) el.remove(); }, 550);
+      }, +this.value * 1000);
+    }
   });
 };
 
@@ -432,7 +442,14 @@ document.getElementById('s-reset').onclick = () => {
   applySettings();
   document.querySelectorAll('.msg').forEach(el => {
     if (el._timeout) clearTimeout(el._timeout);
-    if (settings.msgLife > 0) el._timeout = setTimeout(() => { if (el.parentNode) el.remove(); }, settings.msgLife * 1000);
+    if (el._fading) return;
+    if (settings.msgLife > 0) {
+      el._timeout = setTimeout(() => {
+        el.style.animation = 'fadeOut .5s cubic-bezier(.16,1,.3,1) forwards';
+        el._fading = true;
+        setTimeout(() => { if (el.parentNode) el.remove(); }, 550);
+      }, settings.msgLife * 1000);
+    }
   });
 };
 
