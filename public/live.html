@@ -84,6 +84,9 @@ body{background:transparent;font-family:'Segoe UI',-apple-system,BlinkMacSystemF
       <div class="setting"><label>Twitch username color</label><label class="toggle-switch"><input type="checkbox" id="s-twitch-color" checked><span class="toggle-slider"></span></label></div>
       <div class="setting" id="s-twitch-fallback-row" style="display:none"><label>Twitch fallback color</label><input type="color" id="s-twitch-fallback" value="#e6edf3"></div>
       <div class="setting"><label>YouTube username color</label><input type="color" id="s-yt-color" value="#ff0033"></div>
+      <div class="setting"><label>Linked account color</label><input type="color" id="s-link-color" value=""></div>
+      <div class="setting"><label>Gradient text</label><label class="toggle-switch"><input type="checkbox" id="s-link-gradient"><span class="toggle-slider"></span></label></div>
+      <div class="setting" id="s-link-color2-row" style="display:none"><label>Gradient end color</label><input type="color" id="s-link-color2" value="#58a6ff"></div>
       <div class="setting"><label>Disable chat animations</label><label class="toggle-switch"><input type="checkbox" id="s-no-anim"><span class="toggle-slider"></span></label></div>
       <div class="setting"><label>Show message time</label><label class="toggle-switch"><input type="checkbox" id="s-time"><span class="toggle-slider"></span></label></div>
       <div class="setting"><label>Message lifetime (seconds)</label><select id="s-msg-life"><option value="4">4s</option><option value="8">8s</option><option value="15">15s</option><option value="30">30s</option><option value="0">Never</option></select></div>
@@ -241,6 +244,7 @@ const flags = {
 const DEFAULT_SETTINGS = {
   bg:'#000000', badges:true, fonts:true, userBg:true, obsTransparent:true, textSize:14,
   bubbleBgMode:'fill', showBubbleBg:true, twitchColor:true, twitchFallback:'#e6edf3', ytColor:'#ff0033',
+  linkColor:'', linkColor2:'', linkGradient:false,
   noAnim:false, showTime:false, msgLife:8, bubbleColor:'#0d1117', bubbleShape:'rounded',
   srcTwitch:true, srcYoutube:true, srcDiscord:false, srcCustom:true,
   banlist:''
@@ -277,9 +281,18 @@ function applySettings() {
     el.querySelectorAll('.time').forEach(t => t.style.display = settings.showTime ? '' : 'none');
 
     const user = el.querySelector('.user');
-    if (user && m.source === 'twitch' && m.color && settings.twitchColor) user.style.color = m.color;
-    else if (user && m.source === 'twitch') user.style.color = settings.twitchFallback;
-    if (user && m.source === 'youtube') user.style.color = settings.ytColor;
+    if (user) {
+      user.style.background = '';
+      user.style.webkitTextFillColor = '';
+      user.style.color = '';
+      if (m.linked && settings.linkColor) {
+        applyLinkedColor(user);
+      } else {
+        if (m.source === 'twitch' && m.color && settings.twitchColor) user.style.color = m.color;
+        else if (m.source === 'twitch') user.style.color = settings.twitchFallback;
+        if (m.source === 'youtube') user.style.color = settings.ytColor;
+      }
+    }
 
     const text = el.querySelector('.text');
     if (text) {
@@ -295,6 +308,19 @@ function stripMeta(text) {
   return text.slice(0,s)+text.slice(e+1);
 }
 
+function applyLinkedColor(userEl) {
+  if (!settings.linkColor) return;
+  if (settings.linkGradient && settings.linkColor2) {
+    userEl.style.background = `linear-gradient(90deg, ${settings.linkColor}, ${settings.linkColor2})`;
+    userEl.style.webkitBackgroundClip = 'text';
+    userEl.style.webkitTextFillColor = 'transparent';
+    userEl.style.backgroundClip = 'text';
+  } else {
+    userEl.style.color = settings.linkColor;
+    userEl.style.background = '';
+    userEl.style.webkitTextFillColor = '';
+  }
+}
 function applyFontStyle(el, f) {
   const ol = f.ol > 0 ? `${f.ol}px solid ${f.olc}` : 'none';
   const hasShadow = f.shx || f.shy || f.shb;
@@ -463,9 +489,13 @@ function appendMessage(msg, fromHistory) {
   const user = document.createElement('span');
   user.className = 'user';
   user.textContent = msg.username + ':';
-  if (msg.source === 'twitch' && msg.color && settings.twitchColor) user.style.color = msg.color;
-  else if (msg.source === 'twitch') user.style.color = settings.twitchFallback;
-  if (msg.source === 'youtube') user.style.color = settings.ytColor;
+  if (msg.linked && settings.linkColor) {
+    applyLinkedColor(user);
+  } else {
+    if (msg.source === 'twitch' && msg.color && settings.twitchColor) user.style.color = msg.color;
+    else if (msg.source === 'twitch') user.style.color = settings.twitchFallback;
+    if (msg.source === 'youtube') user.style.color = settings.ytColor;
+  }
   div.appendChild(user);
 
   if (msg.linked) {
@@ -560,6 +590,7 @@ const settingMap = {
   's-bg': 'bg', 's-obs': 'obsTransparent', 's-badges': 'badges', 's-fonts': 'fonts', 's-user-bg': 'userBg', 's-text-size': 'textSize',
   's-bubble-bg-mode': 'bubbleBgMode', 's-bubble-bg': 'showBubbleBg',
   's-twitch-color': 'twitchColor', 's-twitch-fallback': 'twitchFallback', 's-yt-color': 'ytColor',
+  's-link-color': 'linkColor', 's-link-color2': 'linkColor2', 's-link-gradient': 'linkGradient',
   's-no-anim': 'noAnim', 's-time': 'showTime',
   's-msg-life': 'msgLife',
   's-bubble-color': 'bubbleColor', 's-bubble-shape': 'bubbleShape',
@@ -581,6 +612,9 @@ Object.entries(settingMap).forEach(([id, key]) => {
 });
 document.getElementById('s-twitch-color').onchange = function() {
   document.getElementById('s-twitch-fallback-row').style.display = this.checked ? 'none' : '';
+};
+document.getElementById('s-link-gradient').onchange = function() {
+  document.getElementById('s-link-color2-row').style.display = this.checked ? '' : 'none';
 };
 document.getElementById('s-text-size').oninput = function() {
   document.getElementById('s-text-size-val').textContent = this.value;
@@ -610,6 +644,7 @@ document.getElementById('s-reset').onclick = () => {
   });
   document.getElementById('s-text-size-val').textContent = DEFAULT_SETTINGS.textSize;
   document.getElementById('s-twitch-fallback-row').style.display = DEFAULT_SETTINGS.twitchColor ? 'none' : '';
+  document.getElementById('s-link-color2-row').style.display = DEFAULT_SETTINGS.linkGradient ? '' : '';
   applySettings();
   document.querySelectorAll('.msg').forEach(el => {
     if (el._timeout) clearTimeout(el._timeout);
@@ -626,6 +661,7 @@ document.getElementById('s-reset').onclick = () => {
 
 document.getElementById('s-text-size-val').textContent = settings.textSize;
 document.getElementById('s-twitch-fallback-row').style.display = settings.twitchColor ? 'none' : '';
+document.getElementById('s-link-color2-row').style.display = settings.linkGradient ? '' : 'none';
 applySettings();
 updatePlaceholder();
 </script>
