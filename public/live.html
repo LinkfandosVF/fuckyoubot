@@ -70,6 +70,7 @@ body{background:transparent;font-family:'Segoe UI',-apple-system,BlinkMacSystemF
     <section>
       <h3>Interface / Basic</h3>
       <div class="setting"><label>Background color</label><input type="color" id="s-bg" value="#000000"></div>
+      <div class="setting"><label>Transparent for OBS</label><label class="toggle-switch"><input type="checkbox" id="s-obs"><span class="toggle-slider"></span></label></div>
       <div class="setting"><label>Show chat source badges</label><label class="toggle-switch"><input type="checkbox" id="s-badges" checked><span class="toggle-slider"></span></label></div>
       <div class="setting"><label>Use custom font styles</label><label class="toggle-switch"><input type="checkbox" id="s-fonts" checked><span class="toggle-slider"></span></label></div>
     </section>
@@ -124,7 +125,7 @@ const flags = {
 };
 
 const DEFAULT_SETTINGS = {
-  bg:'#000000', badges:true, fonts:true,
+  bg:'#000000', badges:true, fonts:true, obsTransparent:true,
   bubbleBgMode:'fill', showBubbleBg:true, twitchColor:true, ytColor:'#ff0033',
   noAnim:false, showTime:false, msgLife:8, bubbleColor:'#0d1117', bubbleShape:'rounded',
   srcTwitch:true, srcYoutube:true, srcDiscord:false, srcCustom:true,
@@ -138,7 +139,7 @@ let settings = (() => {
 function saveSettings() { localStorage.setItem('liveSettings', JSON.stringify(settings)); }
 
 function applySettings() {
-  document.body.style.background = settings.bg === '#000000' ? 'transparent' : settings.bg;
+  document.body.style.background = settings.obsTransparent ? 'transparent' : settings.bg;
   document.documentElement.style.setProperty('--bubble-color', settings.bubbleColor);
   document.documentElement.style.setProperty('--bubble-radius',
     settings.bubbleShape === 'circle' ? '50px' : settings.bubbleShape === 'square' ? '0' : '10px');
@@ -379,7 +380,7 @@ document.addEventListener('keydown', (e) => {
 
 // Wire up settings controls
 const settingMap = {
-  's-bg': 'bg', 's-badges': 'badges', 's-fonts': 'fonts',
+  's-bg': 'bg', 's-obs': 'obsTransparent', 's-badges': 'badges', 's-fonts': 'fonts',
   's-bubble-bg-mode': 'bubbleBgMode', 's-bubble-bg': 'showBubbleBg',
   's-twitch-color': 'twitchColor', 's-yt-color': 'ytColor',
   's-no-anim': 'noAnim', 's-time': 'showTime',
