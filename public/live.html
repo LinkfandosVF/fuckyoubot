@@ -80,21 +80,26 @@ function applyEffect(el, effect, text, font) {
       el.appendChild(sp);
     }
   } else if (effect === 'rainbow') {
-    const RAINBOW_COLORS = ['#ff0000','#ff8800','#ffff00','#00ff00','#0088ff','#0000ff','#8800ff'];
     el.innerHTML = '';
     const spans = [];
-    for (const ch of text) {
+    for (let i = 0; i < text.length; i++) {
       const sp = document.createElement('span');
-      sp.textContent = ch === ' ' ? '\u00A0' : ch;
-      sp.style.transition = 'color .3s ease';
+      sp.textContent = text[i] === ' ' ? '\u00A0' : text[i];
       el.appendChild(sp); spans.push(sp);
     }
-    let offset = 0;
-    const timer = setInterval(() => {
-      for (let i = 0; i < spans.length; i++) spans[i].style.color = RAINBOW_COLORS[(i + offset) % RAINBOW_COLORS.length];
-      offset = (offset + 1) % RAINBOW_COLORS.length;
-    }, 200);
-    setTimeout(() => { clearInterval(timer); el.innerHTML = text; }, 5000);
+    let start = null;
+    let timer;
+    function frame(t) {
+      if (!start) start = t;
+      const phase = (t - start) / 1000;
+      for (let i = 0; i < spans.length; i++) {
+        const hue = ((i / spans.length) * 360 + phase * 120) % 360;
+        spans[i].style.color = `hsl(${hue}, 100%, 55%)`;
+      }
+      timer = requestAnimationFrame(frame);
+    }
+    timer = requestAnimationFrame(frame);
+    setTimeout(() => { cancelAnimationFrame(timer); el.innerHTML = text; }, 5000);
   } else if (effect && effect.startsWith('flag:')) {
     const fname = effect.replace('flag:','');
     const cols = flags[fname] || flags.pride;

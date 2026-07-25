@@ -291,7 +291,7 @@ function appendMessage(msg, scroll) {
 
   if (msg.effect) {
     setTimeout(() => {
-      if (msg.effect === 'rainbow' && bubble._rainbowTimer) clearInterval(bubble._rainbowTimer);
+      if (msg.effect === 'rainbow' && bubble._rainbowTimer) cancelAnimationFrame(bubble._rainbowTimer);
       bubble.classList.remove('wave-text','flag-text');
       bubble.innerHTML = '';
       const txt = document.createTextNode(msg.message);
@@ -327,9 +327,9 @@ function replayEffect(el, effect) {
     }
     setTimeout(() => { el.classList.remove('wave-text'); el.textContent = el.textContent || ''; }, 5000);
   } else if (effect === 'rainbow') {
-    if (el._rainbowTimer) clearInterval(el._rainbowTimer);
+    if (el._rainbowTimer) cancelAnimationFrame(el._rainbowTimer);
     applyRainbow(el, el.textContent.replace(/\[.*?\]/g,'').trim());
-    setTimeout(() => { if (el._rainbowTimer) clearInterval(el._rainbowTimer); el.innerHTML = el.textContent; }, 5000);
+    setTimeout(() => { if (el._rainbowTimer) cancelAnimationFrame(el._rainbowTimer); el.innerHTML = el.textContent; }, 5000);
   } else if (effect && effect.startsWith('flag:')) {
     const fname = effect.replace('flag:', '');
     const cols = flags[fname] || flags.pride;
@@ -339,24 +339,26 @@ function replayEffect(el, effect) {
   }
 }
 
-const RAINBOW_COLORS = ['#ff0000','#ff8800','#ffff00','#00ff00','#0088ff','#0000ff','#8800ff'];
 function applyRainbow(el, text) {
   el.innerHTML = '';
   const spans = [];
-  for (const ch of text) {
+  for (let i = 0; i < text.length; i++) {
     const sp = document.createElement('span');
-    sp.textContent = ch === ' ' ? '\u00A0' : ch;
-    sp.style.transition = 'color .3s ease';
+    sp.textContent = text[i] === ' ' ? '\u00A0' : text[i];
     el.appendChild(sp);
     spans.push(sp);
   }
-  let offset = 0;
-  el._rainbowTimer = setInterval(() => {
-    for (let i = 0; i < spans.length; i++)
-      spans[i].style.color = RAINBOW_COLORS[(i + offset) % RAINBOW_COLORS.length];
-    offset = (offset + 1) % RAINBOW_COLORS.length;
-  }, 200);
-  applyRainbow._spans = spans;
+  let start = null;
+  function frame(t) {
+    if (!start) start = t;
+    const phase = (t - start) / 1000;
+    for (let i = 0; i < spans.length; i++) {
+      const hue = ((i / spans.length) * 360 + phase * 120) % 360;
+      spans[i].style.color = `hsl(${hue}, 100%, 55%)`;
+    }
+    el._rainbowTimer = requestAnimationFrame(frame);
+  }
+  el._rainbowTimer = requestAnimationFrame(frame);
 }
 
 function scrollToBottom() { messagesEl.scrollTop = messagesEl.scrollHeight; }
