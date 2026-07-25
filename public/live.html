@@ -151,13 +151,30 @@ function applySettings() {
     settings.bubbleBgMode === 'none' ? 'transparent' : settings.showBubbleBg ? settings.bubbleColor : 'transparent');
   // re-style existing messages
   document.querySelectorAll('.msg').forEach(el => {
+    const m = el._msg || {};
+    const sk = srcKey(m.source);
+    const banned = isBanned(m.username || '');
+    el.style.display = (sk && !settings[sk]) || banned ? 'none' : '';
+
     el.style.background = settings.showBubbleBg && settings.bubbleBgMode !== 'none' ? settings.bubbleColor : 'transparent';
     el.style.borderRadius = document.documentElement.style.getPropertyValue('--bubble-radius');
     el.style.border = settings.showBubbleBg ? '1px solid rgba(48,54,61,0.5)' : 'none';
     el.style.boxShadow = settings.showBubbleBg ? '' : 'none';
     if (settings.noAnim || !settings.showBubbleBg) el.style.animation = 'none';
+
     el.querySelectorAll('.badge').forEach(b => b.style.display = settings.badges ? '' : 'none');
     el.querySelectorAll('.time').forEach(t => t.style.display = settings.showTime ? '' : 'none');
+
+    const user = el.querySelector('.user');
+    if (user && m.source === 'twitch' && m.color && settings.twitchColor) user.style.color = m.color;
+    else if (user && m.source === 'twitch') user.style.color = settings.twitchFallback;
+    if (user && m.source === 'youtube') user.style.color = settings.ytColor;
+
+    const text = el.querySelector('.text');
+    if (text) {
+      if (m.font && settings.fonts) applyFontStyle(text, m.font);
+      else text.style.cssText = '';
+    }
   });
 }
 
@@ -262,7 +279,33 @@ function isBanned(username) {
   return settings.banlist.split(/\s+/).some(b => b.toLowerCase() === username.toLowerCase());
 }
 
-function srcKey(source) {
+function updatePlaceholder() {
+  let el = document.getElementById('placeholder');
+  if (messagesEl.children.length === 0 || (messagesEl.children.length === 1 && el)) {
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'placeholder';
+      el.className = 'msg';
+      el.style.cssText = 'opacity:0.4;user-select:none';
+      const b = document.createElement('span');
+      b.className = 'badge badge-custom';
+      b.textContent = 'BONEBRG';
+      el.appendChild(b);
+      const u = document.createElement('span');
+      u.className = 'user';
+      u.textContent = 'Alas:';
+      u.style.color = '#e6edf3';
+      el.appendChild(u);
+      const t = document.createElement('span');
+      t.className = 'text';
+      t.textContent = 'Hello world, programmed to work and not to think, not even sure that this is real... Hello world.';
+      el.appendChild(t);
+    }
+    if (!el.parentNode) messagesEl.appendChild(el);
+  } else {
+    if (el) el.remove();
+  }
+}
   if (source === 'twitch') return 'srcTwitch';
   if (source === 'youtube') return 'srcYoutube';
   if (source === 'discord') return 'srcDiscord';
@@ -273,6 +316,7 @@ function srcKey(source) {
 socket.on('history', (msgs) => {
   messagesEl.innerHTML = '';
   for (const m of msgs.slice(-30)) appendMessage(m, true);
+  updatePlaceholder();
 });
 
 socket.on('message', (msg) => {
@@ -286,6 +330,7 @@ socket.on('message', (msg) => {
 function appendMessage(msg, fromHistory) {
   const div = document.createElement('div');
   div.className = 'msg';
+  div._msg = msg;
 
   const src = msg.source === 'custom' ? 'bonebrg' : msg.source;
   const badge = document.createElement('span');
@@ -365,6 +410,7 @@ function appendMessage(msg, fromHistory) {
       setTimeout(() => { if (div.parentNode) div.remove(); }, 550);
     }, settings.msgLife * 1000);
   }
+  updatePlaceholder();
 }
 
 // Settings panel UI
@@ -429,7 +475,7 @@ document.getElementById('s-msg-life').onchange = function() {
       el._timeout = setTimeout(() => {
         el.style.animation = 'fadeOut .5s cubic-bezier(.16,1,.3,1) forwards';
         el._fading = true;
-        setTimeout(() => { if (el.parentNode) el.remove(); }, 550);
+        setTimeout(() => { if (el.parentNode) el.remove(); updatePlaceholder(); }, 550);
       }, +this.value * 1000);
     }
   });
@@ -454,7 +500,7 @@ document.getElementById('s-reset').onclick = () => {
       el._timeout = setTimeout(() => {
         el.style.animation = 'fadeOut .5s cubic-bezier(.16,1,.3,1) forwards';
         el._fading = true;
-        setTimeout(() => { if (el.parentNode) el.remove(); }, 550);
+        setTimeout(() => { if (el.parentNode) el.remove(); updatePlaceholder(); }, 550);
       }, settings.msgLife * 1000);
     }
   });
@@ -463,6 +509,7 @@ document.getElementById('s-reset').onclick = () => {
 document.getElementById('s-text-size-val').textContent = settings.textSize;
 document.getElementById('s-twitch-fallback-row').style.display = settings.twitchColor ? 'none' : '';
 applySettings();
+updatePlaceholder();
 </script>
 </body>
 </html>
