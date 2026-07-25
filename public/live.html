@@ -73,10 +73,10 @@ function applyEffect(el, effect, text, font) {
   if (effect === 'wave') {
     el.classList.add('wave-text');
     el.innerHTML = '';
-    for (const ch of text) {
+    for (let i = 0; i < text.length; i++) {
       const sp = document.createElement('span');
-      sp.textContent = ch === ' ' ? '\u00A0' : ch;
-      sp.style.animationDelay = Math.random() * .5 + 's';
+      sp.textContent = text[i] === ' ' ? '\u00A0' : text[i];
+      sp.style.animationDelay = (i * 0.08) + 's';
       el.appendChild(sp);
     }
   } else if (effect === 'rainbow') {

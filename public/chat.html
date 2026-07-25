@@ -259,10 +259,10 @@ function appendMessage(msg, scroll) {
     if (msg.effect === 'wave') {
       bubble.classList.add('wave-text');
       bubble.dataset.effect = 'wave';
-      for (const ch of msg.message) {
+      for (let i = 0; i < msg.message.length; i++) {
         const sp = document.createElement('span');
-        sp.textContent = ch === ' ' ? '\u00A0' : ch;
-        sp.style.animationDelay = Math.random() * .5 + 's';
+        sp.textContent = msg.message[i] === ' ' ? '\u00A0' : msg.message[i];
+        sp.style.animationDelay = (i * 0.08) + 's';
         bubble.appendChild(sp);
       }
     } else if (msg.effect === 'rainbow') {
@@ -318,10 +318,11 @@ function replayEffect(el, effect) {
   if (effect === 'wave') {
     el.classList.add('wave-text');
     el.innerHTML = '';
-    for (const ch of (el.textContent || '')) {
+    const txt = el.textContent || '';
+    for (let i = 0; i < txt.length; i++) {
       const sp = document.createElement('span');
-      sp.textContent = ch === ' ' ? '\u00A0' : ch;
-      sp.style.animationDelay = Math.random() * .5 + 's';
+      sp.textContent = txt[i] === ' ' ? '\u00A0' : txt[i];
+      sp.style.animationDelay = (i * 0.08) + 's';
       el.appendChild(sp);
     }
     setTimeout(() => { el.classList.remove('wave-text'); el.textContent = el.textContent || ''; }, 5000);
