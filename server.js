@@ -88,23 +88,24 @@ function addMessage(source, username, text, replyTo = null, timestamp = null) {
 const TWITCH_BOT_USERNAME = process.env.TWITCH_BOT_USERNAME || '';
 const TWITCH_BOT_OAUTH = process.env.TWITCH_BOT_OAUTH || '';
 
-function sendToTwitch(source, username, text) {
-  if (source === 'twitch' || !TWITCH_BOT_USERNAME || !TWITCH_BOT_OAUTH) return;
-  if (!twitchClient.readyState || twitchClient.readyState !== 'OPEN') { console.log('Twitch bot not connected'); return; }
-  const prefix = source === 'youtube' ? 'YT' : 'Chat';
-  twitchClient.say(TWITCH_CHANNEL.toLowerCase(), `[${prefix}] ${username}: ${text}`).catch(e => console.log('Twitch say:', e.message));
-}
-
 const twitchClient = new tmi.Client({
   channels: [TWITCH_CHANNEL.toLowerCase()],
   connection: { reconnect: true, secure: true },
   identity: TWITCH_BOT_USERNAME && TWITCH_BOT_OAUTH ? { username: TWITCH_BOT_USERNAME, password: TWITCH_BOT_OAUTH } : undefined
 });
+if (TWITCH_BOT_USERNAME) console.log('Twitch bot:', TWITCH_BOT_USERNAME, TWITCH_BOT_OAUTH ? 'with token' : 'no token (read-only)');
 twitchClient.connect().catch(e => console.log('Twitch:', e.message));
+twitchClient.on('connected', () => console.log('Twitch connected'));
 twitchClient.on('message', (channel, tags, message) => {
   const ts = tags['tmi-sent-ts'] ? parseInt(tags['tmi-sent-ts']) : null;
   addMessage('twitch', tags['display-name'] || tags.username, message, null, ts);
 });
+
+function sendToTwitch(source, username, text) {
+  if (source === 'twitch' || !TWITCH_BOT_USERNAME || !TWITCH_BOT_OAUTH) return;
+  const prefix = source === 'youtube' ? 'YT' : 'Chat';
+  twitchClient.say(TWITCH_CHANNEL.toLowerCase(), `[${prefix}] ${username}: ${text}`).catch(e => console.log('Twitch say:', e.message));
+}
 
 let ytInterval = null;
 async function setupYouTube() {
