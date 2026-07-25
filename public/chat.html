@@ -417,12 +417,22 @@ const EFFECT_DURATION = 5000;
 const FADE_DURATION = 1000;
 
 function renderTextWithEmotes(text, emotes) {
-  if (!emotes || typeof emotes !== 'object') return [document.createTextNode(text)];
+  if (!emotes) return [document.createTextNode(text)];
+  let parsed = emotes;
+  if (typeof emotes === 'string') {
+    parsed = {};
+    for (const part of emotes.split('/')) {
+      const [id, poses] = part.split(':');
+      if (id && poses) parsed[id] = poses.split(',');
+    }
+  }
+  if (typeof parsed !== 'object') return [document.createTextNode(text)];
   const ranges = [];
-  for (const id in emotes) {
-    if (!Object.prototype.hasOwnProperty.call(emotes, id)) continue;
-    for (const pos of emotes[id]) {
+  for (const id in parsed) {
+    if (!Object.prototype.hasOwnProperty.call(parsed, id)) continue;
+    for (const pos of parsed[id]) {
       const [s, e] = pos.split('-').map(Number);
+      if (isNaN(s) || isNaN(e)) continue;
       ranges.push({ start: s, end: e, id });
     }
   }
