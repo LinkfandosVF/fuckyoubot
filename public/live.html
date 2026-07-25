@@ -8,9 +8,7 @@
 @keyframes slideIn{0%{opacity:0;transform:translateY(20px) scale(.97)}100%{opacity:1;transform:translateY(0) scale(1)}}
 @keyframes glow{0%,100%{box-shadow:0 0 4px rgba(88,166,255,.3)}50%{box-shadow:0 0 12px rgba(88,166,255,.6)}}
 @keyframes badgePop{0%{transform:scale(0)}60%{transform:scale(1.15)}100%{transform:scale(1)}}
-@keyframes wave{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
 @keyframes flagAnim{0%{background-position:0% 50%}100%{background-position:100% 50%}}
-.wave-text span{display:inline-block;animation:wave .4s ease-in-out infinite}
 .flag-text{background-size:200% 100%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:flagAnim 3s linear infinite}
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:transparent;font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;overflow:hidden;height:100vh}
@@ -28,7 +26,7 @@ body{background:transparent;font-family:'Segoe UI',-apple-system,BlinkMacSystemF
 .msg .reply-indicator .ru{color:#58a6ff;font-weight:600}
 .msg .time{font-size:11px;color:#484f58;flex-shrink:0}
 .msg .effect-tag{font-size:10px;color:#8b949e;margin-left:4px;cursor:pointer;border-bottom:1px dotted #555}
-@media(prefers-reduced-motion:reduce){.msg{animation:none}.msg .badge{animation:none}.wave-text span{animation:none}.flag-text{animation:none}}
+@media(prefers-reduced-motion:reduce){.msg{animation:none}.msg .badge{animation:none}.flag-text{animation:none}}
 </style>
 </head>
 <body>
@@ -38,6 +36,8 @@ body{background:transparent;font-family:'Segoe UI',-apple-system,BlinkMacSystemF
 const socket = io();
 const messagesEl = document.getElementById('messages');
 const MAX_VISIBLE = 30;
+const EFFECT_DURATION = 5000;
+const FADE_DURATION = 1000;
 const flags = {
   pride: ['#ff0000','#ff8c00','#ffff00','#008000','#0000ff','#4b0082','#8b00ff'],
   trans: ['#55cdfc','#f7a8b8','#fff','#f7a8b8','#55cdfc'],
@@ -58,6 +58,92 @@ function stripMeta(text) {
   return text.slice(0,s)+text.slice(e+1);
 }
 
+function stopEffect(el) {
+  if (el._effectTimer) { cancelAnimationFrame(el._effectTimer); el._effectTimer = null; }
+  el.classList.remove('flag-text');
+}
+
+function applyWave(el, text) {
+  stopEffect(el);
+  el.innerHTML = '';
+  const spans = [];
+  for (let i = 0; i < text.length; i++) {
+    const sp = document.createElement('span');
+    sp.textContent = text[i] === ' ' ? '\u00A0' : text[i];
+    sp.style.display = 'inline-block';
+    el.appendChild(sp);
+    spans.push(sp);
+  }
+  const startTime = performance.now();
+  function frame(t) {
+    const elapsed = t - startTime;
+    const remaining = Math.max(0, EFFECT_DURATION - elapsed);
+    const amp = 5 * Math.min(remaining / FADE_DURATION, 1);
+    for (let i = 0; i < spans.length; i++) {
+      const phase = (elapsed / 1000 + i * 0.08) / 0.4 * Math.PI * 2;
+      spans[i].style.transform = `translateY(${Math.sin(phase) * amp}px)`;
+    }
+    if (elapsed < EFFECT_DURATION) {
+      el._effectTimer = requestAnimationFrame(frame);
+    } else {
+      el.innerHTML = text;
+    }
+  }
+  el._effectTimer = requestAnimationFrame(frame);
+}
+
+function applyRainbow(el, text) {
+  stopEffect(el);
+  el.innerHTML = '';
+  const spans = [];
+  for (let i = 0; i < text.length; i++) {
+    const sp = document.createElement('span');
+    sp.textContent = text[i] === ' ' ? '\u00A0' : text[i];
+    el.appendChild(sp);
+    spans.push(sp);
+  }
+  const startTime = performance.now();
+  function frame(t) {
+    const elapsed = t - startTime;
+    const remaining = Math.max(0, EFFECT_DURATION - elapsed);
+    const fade = Math.min(remaining / FADE_DURATION, 1);
+    const sat = 100 * fade + '%';
+    const light = 35 + 20 * fade;
+    for (let i = 0; i < spans.length; i++) {
+      const hue = ((i / spans.length) * 360 + elapsed / 1000 * 120) % 360;
+      spans[i].style.color = `hsl(${hue}, ${sat}, ${light}%)`;
+    }
+    if (elapsed < EFFECT_DURATION) {
+      el._effectTimer = requestAnimationFrame(frame);
+    } else {
+      el.innerHTML = text;
+    }
+  }
+  el._effectTimer = requestAnimationFrame(frame);
+}
+
+function applyFlag(el, text, fname) {
+  stopEffect(el);
+  const cols = flags[fname] || flags.pride;
+  el.innerHTML = `<span class="flag-text" style="background:linear-gradient(90deg,${cols.join(',')})">${text}</span>`;
+  el.classList.add('flag-text');
+  const startTime = performance.now();
+  function frame(t) {
+    const elapsed = t - startTime;
+    const remaining = Math.max(0, EFFECT_DURATION - elapsed);
+    const fade = Math.min(remaining / FADE_DURATION, 1);
+    el.style.opacity = fade;
+    if (elapsed < EFFECT_DURATION) {
+      el._effectTimer = requestAnimationFrame(frame);
+    } else {
+      el.classList.remove('flag-text');
+      el.innerHTML = text;
+      el.style.opacity = '';
+    }
+  }
+  el._effectTimer = requestAnimationFrame(frame);
+}
+
 socket.on('history', (msgs) => {
   messagesEl.innerHTML = '';
   for (const m of msgs.slice(-30)) appendMessage(m, true);
@@ -67,63 +153,6 @@ socket.on('message', (msg) => {
   appendMessage(msg, false);
   while (messagesEl.children.length > MAX_VISIBLE) messagesEl.removeChild(messagesEl.firstChild);
 });
-
-function applyEffect(el, effect, text, font) {
-  let container = el;
-  if (effect === 'wave') {
-    el.classList.add('wave-text');
-    el.innerHTML = '';
-    for (let i = 0; i < text.length; i++) {
-      const sp = document.createElement('span');
-      sp.textContent = text[i] === ' ' ? '\u00A0' : text[i];
-      sp.style.animationDelay = (i * 0.08) + 's';
-      el.appendChild(sp);
-    }
-  } else if (effect === 'rainbow') {
-    el.innerHTML = '';
-    const spans = [];
-    for (let i = 0; i < text.length; i++) {
-      const sp = document.createElement('span');
-      sp.textContent = text[i] === ' ' ? '\u00A0' : text[i];
-      el.appendChild(sp); spans.push(sp);
-    }
-    let start = null;
-    let timer;
-    function frame(t) {
-      if (!start) start = t;
-      const phase = (t - start) / 1000;
-      for (let i = 0; i < spans.length; i++) {
-        const hue = ((i / spans.length) * 360 + phase * 120) % 360;
-        spans[i].style.color = `hsl(${hue}, 100%, 55%)`;
-      }
-      timer = requestAnimationFrame(frame);
-    }
-    timer = requestAnimationFrame(frame);
-    setTimeout(() => { cancelAnimationFrame(timer); el.innerHTML = text; }, 5000);
-  } else if (effect && effect.startsWith('flag:')) {
-    const fname = effect.replace('flag:','');
-    const cols = flags[fname] || flags.pride;
-    el.innerHTML = `<span class="flag-text" style="background:linear-gradient(90deg,${cols.join(',')})">${text}</span>`;
-  }
-  if (effect) {
-    const et = document.createElement('span');
-    et.className = 'effect-tag';
-    et.textContent = effect.startsWith('flag:') ? effect.replace('flag:','') : effect;
-    et.onclick = () => { el.innerHTML = ''; applyEffect(el, effect, text, font); };
-    el.appendChild(et);
-    setTimeout(() => {
-      el.classList.remove('wave-text'); el.innerHTML = '';
-      const txt = document.createElement('span'); txt.className = 'text'; txt.textContent = text;
-      el.appendChild(txt);
-      if (effect) {
-        const et2 = document.createElement('span'); et2.className = 'effect-tag';
-        et2.textContent = effect.startsWith('flag:') ? effect.replace('flag:','') : effect;
-        et2.onclick = () => { el.innerHTML = ''; applyEffect(el, effect, text, font); };
-        el.appendChild(et2);
-      }
-    }, 5000);
-  }
-}
 
 function appendMessage(msg, fromHistory) {
   const div = document.createElement('div');
@@ -168,9 +197,17 @@ function appendMessage(msg, fromHistory) {
     const et = document.createElement('span');
     et.className = 'effect-tag';
     et.textContent = msg.effect.startsWith('flag:') ? msg.effect.replace('flag:','') : msg.effect;
-    et.onclick = () => applyEffect(text, msg.effect, cleanText, msg.font);
+    et.onclick = () => {
+      if (msg.effect === 'wave') applyWave(text, cleanText);
+      else if (msg.effect === 'rainbow') applyRainbow(text, cleanText);
+      else if (msg.effect && msg.effect.startsWith('flag:')) applyFlag(text, cleanText, msg.effect.replace('flag:', ''));
+    };
     div.appendChild(et);
-    if (!fromHistory) setTimeout(() => applyEffect(text, msg.effect, cleanText, msg.font), 100);
+    if (!fromHistory) setTimeout(() => {
+      if (msg.effect === 'wave') applyWave(text, cleanText);
+      else if (msg.effect === 'rainbow') applyRainbow(text, cleanText);
+      else if (msg.effect && msg.effect.startsWith('flag:')) applyFlag(text, cleanText, msg.effect.replace('flag:', ''));
+    }, 100);
   }
 
   messagesEl.appendChild(div);
