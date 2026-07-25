@@ -12,22 +12,22 @@
 @keyframes flagAnim{0%{background-position:0% 50%}100%{background-position:100% 50%}}
 @keyframes panelSlide{0%{transform:translateX(100%)}100%{transform:translateX(0)}}
 .flag-text{background-size:200% 100%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:flagAnim 3s linear infinite}
-*{margin:0;padding:0;box-sizing:border-box}
+*{margin:0;padding:0;box-sizing:border-box}:root{--text-size:14px}
 body{background:transparent;font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;overflow:hidden;height:100vh;transition:background .3s}
 #messages{display:flex;flex-direction:column;gap:6px;padding:16px;height:100vh;overflow:hidden;justify-content:flex-end}
 .msg{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:10px;background:rgba(13,17,23,0.75);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(48,54,61,0.5);animation:slideIn .4s cubic-bezier(.16,1,.3,1) forwards,glow 3s ease-in-out .4s infinite;transition:border-radius .3s,background .3s}
-.msg .badge{font-size:9px;font-weight:700;padding:2px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:.5px;animation:badgePop .3s cubic-bezier(.34,1.56,.64,1) .1s both;flex-shrink:0}
+.msg .user{font-weight:700;font-size:var(--text-size);flex-shrink:0}
+.msg .text{font-size:var(--text-size);color:#e6edf3;word-break:break-word;flex:1;line-height:1.4}
+.msg .reply-indicator{font-size:calc(var(--text-size) * 0.85);color:#8b949e;display:flex;align-items:center;gap:4px;flex-shrink:0}
+.msg .reply-indicator::before{content:'↩'}
+.msg .reply-indicator .ru{color:#58a6ff;font-weight:600}
+.msg .time{font-size:calc(var(--text-size) * 0.78);color:#484f58;flex-shrink:0}
+.msg .effect-tag{font-size:calc(var(--text-size) * 0.7);color:#8b949e;margin-left:4px;cursor:pointer;border-bottom:1px dotted #555}
+.msg .badge{font-size:calc(var(--text-size) * 0.64);font-weight:700;padding:2px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:.5px;animation:badgePop .3s cubic-bezier(.34,1.56,.64,1) .1s both;flex-shrink:0}
 .badge-twitch{background:linear-gradient(135deg,#9147ff,#772ce8);color:#fff;box-shadow:0 0 8px rgba(145,71,255,.4)}
 .badge-youtube{background:linear-gradient(135deg,#ff0033,#cc0000);color:#fff;box-shadow:0 0 8px rgba(255,0,51,.4)}
 .badge-discord{background:linear-gradient(135deg,#5865f2,#4752c4);color:#fff;box-shadow:0 0 8px rgba(88,101,242,.4)}
 .badge-custom,.badge-bonebrg{background:#fff;color:#000;box-shadow:0 0 8px rgba(255,255,255,.3)}
-.msg .user{font-weight:700;font-size:14px;flex-shrink:0}
-.msg .text{font-size:14px;color:#e6edf3;word-break:break-word;flex:1;line-height:1.4}
-.msg .reply-indicator{font-size:12px;color:#8b949e;display:flex;align-items:center;gap:4px;flex-shrink:0}
-.msg .reply-indicator::before{content:'↩'}
-.msg .reply-indicator .ru{color:#58a6ff;font-weight:600}
-.msg .time{font-size:11px;color:#484f58;flex-shrink:0}
-.msg .effect-tag{font-size:10px;color:#8b949e;margin-left:4px;cursor:pointer;border-bottom:1px dotted #555}
 @media(prefers-reduced-motion:reduce){.msg{animation:none}.msg .badge{animation:none}.flag-text{animation:none}}
 
 #settings-toggle{position:fixed;bottom:16px;right:16px;width:40px;height:40px;border-radius:50%;background:rgba(13,17,23,.8);border:1px solid rgba(48,54,61,.5);color:#8b949e;font-size:20px;cursor:pointer;display:none;align-items:center;justify-content:center;z-index:100;backdrop-filter:blur(8px);transition:color .2s,background .2s}
@@ -73,6 +73,7 @@ body{background:transparent;font-family:'Segoe UI',-apple-system,BlinkMacSystemF
       <div class="setting"><label>Transparent for OBS</label><label class="toggle-switch"><input type="checkbox" id="s-obs"><span class="toggle-slider"></span></label></div>
       <div class="setting"><label>Show chat source badges</label><label class="toggle-switch"><input type="checkbox" id="s-badges" checked><span class="toggle-slider"></span></label></div>
       <div class="setting"><label>Use custom font styles</label><label class="toggle-switch"><input type="checkbox" id="s-fonts" checked><span class="toggle-slider"></span></label></div>
+      <div class="setting"><label>Text size: <span id="s-text-size-val">14</span>px</label><input type="range" id="s-text-size" min="8" max="30" value="14" step="1"></div>
     </section>
     <section>
       <h3>Chat Bubbles</h3>
@@ -125,7 +126,7 @@ const flags = {
 };
 
 const DEFAULT_SETTINGS = {
-  bg:'#000000', badges:true, fonts:true, obsTransparent:true,
+  bg:'#000000', badges:true, fonts:true, obsTransparent:true, textSize:14,
   bubbleBgMode:'fill', showBubbleBg:true, twitchColor:true, ytColor:'#ff0033',
   noAnim:false, showTime:false, msgLife:8, bubbleColor:'#0d1117', bubbleShape:'rounded',
   srcTwitch:true, srcYoutube:true, srcDiscord:false, srcCustom:true,
@@ -140,6 +141,7 @@ function saveSettings() { localStorage.setItem('liveSettings', JSON.stringify(se
 
 function applySettings() {
   document.body.style.background = settings.obsTransparent ? 'transparent' : settings.bg;
+  document.documentElement.style.setProperty('--text-size', settings.textSize + 'px');
   document.documentElement.style.setProperty('--bubble-color', settings.bubbleColor);
   document.documentElement.style.setProperty('--bubble-radius',
     settings.bubbleShape === 'circle' ? '50px' : settings.bubbleShape === 'square' ? '0' : '10px');
@@ -385,7 +387,7 @@ document.addEventListener('keydown', (e) => {
 
 // Wire up settings controls
 const settingMap = {
-  's-bg': 'bg', 's-obs': 'obsTransparent', 's-badges': 'badges', 's-fonts': 'fonts',
+  's-bg': 'bg', 's-obs': 'obsTransparent', 's-badges': 'badges', 's-fonts': 'fonts', 's-text-size': 'textSize',
   's-bubble-bg-mode': 'bubbleBgMode', 's-bubble-bg': 'showBubbleBg',
   's-twitch-color': 'twitchColor', 's-yt-color': 'ytColor',
   's-no-anim': 'noAnim', 's-time': 'showTime',
@@ -407,6 +409,9 @@ Object.entries(settingMap).forEach(([id, key]) => {
     applySettings();
   };
 });
+document.getElementById('s-text-size').oninput = function() {
+  document.getElementById('s-text-size-val').textContent = this.value;
+};
 
 document.getElementById('s-reset').onclick = () => {
   settings = {...DEFAULT_SETTINGS};
@@ -417,9 +422,11 @@ document.getElementById('s-reset').onclick = () => {
     if (el.type === 'checkbox') el.checked = settings[key];
     else el.value = settings[key];
   });
+  document.getElementById('s-text-size-val').textContent = DEFAULT_SETTINGS.textSize;
   applySettings();
 };
 
+document.getElementById('s-text-size-val').textContent = settings.textSize;
 applySettings();
 </script>
 </body>
