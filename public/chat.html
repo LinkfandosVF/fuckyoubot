@@ -334,6 +334,21 @@ async function loadEmotes() {
           }
     }).catch(()=>{})
   ];
+  const userId = await fetch('https://decapi.me/twitch/id/mrpemmfub').then(r=>r.text()).catch(()=>null);
+  if (userId) {
+    sources.push(
+      fetch(`https://api.betterttv.net/3/cached/users/twitch/${userId}`).then(r=>r.json()).then(d => {
+        for (const em of d.channelEmotes || []) {
+          emoteMap.set(em.code.toLowerCase(), `https://cdn.betterttv.net/emote/${em.id}/2x`);
+          emotes.push({name:em.code, url:`https://cdn.betterttv.net/emote/${em.id}/2x`});
+        }
+        for (const em of d.sharedEmotes || []) {
+          emoteMap.set(em.code.toLowerCase(), `https://cdn.betterttv.net/emote/${em.id}/2x`);
+          emotes.push({name:em.code, url:`https://cdn.betterttv.net/emote/${em.id}/2x`});
+        }
+      }).catch(()=>{})
+    );
+  }
   await Promise.all(sources);
   emotesLoaded = true;
   reRenderEmotes();
@@ -620,7 +635,7 @@ function appendMessage(msg, scroll) {
     tag.onclick = () => replayEffect(bubble, msg.effect, msg.message);
     bubble.appendChild(tag);
   } else {
-    const textNodes = renderTextWithEmotes(msg.message);
+    const textNodes = renderTextWithEmotes(msg.message, msg.emotes);
     bubble.append(...textNodes);
   }
 

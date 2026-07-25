@@ -204,6 +204,17 @@ async function loadEmotes() {
             emoteMap.set(em.name.toLowerCase(), `https:${em.urls['1']||em.urls['2']||em.urls['4']||''}`);
     }).catch(()=>{})
   ];
+  const userId = await fetch('https://decapi.me/twitch/id/mrpemmfub').then(r=>r.text()).catch(()=>null);
+  if (userId) {
+    sources.push(
+      fetch(`https://api.betterttv.net/3/cached/users/twitch/${userId}`).then(r=>r.json()).then(d => {
+        for (const em of d.channelEmotes || [])
+          emoteMap.set(em.code.toLowerCase(), `https://cdn.betterttv.net/emote/${em.id}/2x`);
+        for (const em of d.sharedEmotes || [])
+          emoteMap.set(em.code.toLowerCase(), `https://cdn.betterttv.net/emote/${em.id}/2x`);
+      }).catch(()=>{})
+    );
+  }
   await Promise.all(sources);
   emotesLoaded = true;
   reRenderEmotes();
