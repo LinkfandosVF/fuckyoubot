@@ -90,8 +90,9 @@ const TWITCH_BOT_OAUTH = process.env.TWITCH_BOT_OAUTH || '';
 
 function sendToTwitch(source, username, text) {
   if (source === 'twitch' || !TWITCH_BOT_USERNAME || !TWITCH_BOT_OAUTH) return;
+  if (!twitchClient.readyState || twitchClient.readyState !== 'OPEN') { console.log('Twitch bot not connected'); return; }
   const prefix = source === 'youtube' ? 'YT' : 'Chat';
-  twitchClient.say(TWITCH_CHANNEL.toLowerCase(), `[${prefix}] ${username}: ${text}`).catch(() => {});
+  twitchClient.say(TWITCH_CHANNEL.toLowerCase(), `[${prefix}] ${username}: ${text}`).catch(e => console.log('Twitch say:', e.message));
 }
 
 const twitchClient = new tmi.Client({
