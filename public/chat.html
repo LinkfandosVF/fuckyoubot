@@ -108,21 +108,18 @@ body{background:#0d1117;color:#e6edf3;font-family:-apple-system,BlinkMacSystemFo
   <label>Background</label>
   <input type="color" id="font-bg" value="#21262d">
   <label>Outline</label>
-  <select id="font-outline">
-    <option value="none">None</option>
-    <option value="1px solid #000">Thin Black</option>
-    <option value="2px solid #000">Thick Black</option>
-    <option value="1px solid #fff">Thin White</option>
-    <option value="2px solid #fff">Thick White</option>
-  </select>
+  <div style="display:flex;gap:8px;align-items:center">
+    <input type="number" id="font-ol" min="0" max="5" step="1" value="0" style="width:50px" title="Thickness (px)">
+    <input type="color" id="font-olc" value="#000000" style="flex:1;height:36px" title="Outline color">
+  </div>
   <label>Shadow</label>
-  <select id="font-shadow">
-    <option value="none">None</option>
-    <option value="1px 1px 2px rgba(0,0,0,0.3)">Soft</option>
-    <option value="2px 2px 4px rgba(0,0,0,0.4)">Medium</option>
-    <option value="3px 3px 6px rgba(0,0,0,0.5)">Strong</option>
-    <option value="1px 1px 2px rgba(255,255,255,0.5)">Soft Light</option>
-  </select>
+  <div style="display:flex;gap:6px;flex-wrap:wrap">
+    <input type="number" id="font-shx" min="-20" max="20" step="1" value="1" style="width:44px" title="X offset">
+    <input type="number" id="font-shy" min="-20" max="20" step="1" value="1" style="width:44px" title="Y offset">
+    <input type="number" id="font-shb" min="0" max="40" step="1" value="2" style="width:44px" title="Blur radius">
+    <input type="color" id="font-shc" value="#000000" style="flex:1;min-width:30px;height:36px" title="Shadow color">
+    <input type="range" id="font-sho" min="0" max="100" value="50" style="width:50px" title="Shadow opacity">
+  </div>
   <button class="reset-btn" id="reset-font">Reset to Defaults</button>
   <div class="font-preview" id="font-preview">AaBbYy</div>
 </div>
@@ -167,8 +164,16 @@ const flags = {
 };
 let filteredCommands = [], selectedCmdIdx = -1;
 let emotes = [];
-const DEFAULT_FONT = {fn:'Arial',fc:'#e6edf3',bg:'#21262d',ol:'none',sh:'none'};
-let fontSettings = JSON.parse(localStorage.getItem('font') || JSON.stringify(DEFAULT_FONT));
+const DEFAULT_FONT = {fn:'Arial',fc:'#e6edf3',bg:'#21262d',ol:0,olc:'#000000',shx:1,shy:1,shb:2,shc:'#000000',sho:50};
+let fontSettings = (() => {
+  const raw = localStorage.getItem('font');
+  if (!raw) return {...DEFAULT_FONT};
+  const parsed = JSON.parse(raw);
+  // migrate old select-based outline/shadow
+  if (typeof parsed.ol === 'string') { parsed.ol = 0; parsed.olc = '#000000'; }
+  if (typeof parsed.sh === 'string') { parsed.shx = 1; parsed.shy = 1; parsed.shb = 2; parsed.shc = '#000000'; parsed.sho = 50; delete parsed.sh; }
+  return {...DEFAULT_FONT, ...parsed};
+})();
 
 const messagesEl = document.getElementById('messages');
 const input = document.getElementById('msg-input');
@@ -189,28 +194,43 @@ const fontPreview = document.getElementById('font-preview');
 nickDisplay.textContent = username;
 settingsBtn.onclick = () => settingsPanel.classList.toggle('show');
 
-['font-family','font-color','font-bg','font-outline','font-shadow'].forEach(id => {
+function applyFontStyle(el, f) {
+  const ol = f.ol > 0 ? `${f.ol}px solid ${f.olc}` : 'none';
+  const sh = (f.shx || f.shy || f.shb) ? `${f.shx||0}px ${f.shy||0}px ${f.shb||0}px ${f.shc}${f.sho < 100 ? Math.round(f.sho*2.55).toString(16).padStart(2,'0') : ''}` : 'none';
+  el.style.cssText = `font-family:${f.fn};color:${f.fc};background:${f.bg};-webkit-text-stroke:${ol};text-shadow:${sh}`;
+}
+
+const fontKeys = [
+  {id:'font-family', key:'fn'},
+  {id:'font-color', key:'fc'},
+  {id:'font-bg', key:'bg'},
+  {id:'font-ol', key:'ol'},
+  {id:'font-olc', key:'olc'},
+  {id:'font-shx', key:'shx'},
+  {id:'font-shy', key:'shy'},
+  {id:'font-shb', key:'shb'},
+  {id:'font-shc', key:'shc'},
+  {id:'font-sho', key:'sho'},
+];
+fontKeys.forEach(({id, key}) => {
   const el = document.getElementById(id);
-  const key = { 'font-family':'fn','font-color':'fc','font-bg':'bg','font-outline':'ol','font-shadow':'sh' }[id];
-  el.value = fontSettings[key] || el.value;
-  el.onchange = () => {
-    fontSettings[key] = el.value;
+  el.value = fontSettings[key] !== undefined ? fontSettings[key] : el.value;
+  el.onchange = el.oninput = () => {
+    fontSettings[key] = el.type === 'number' || el.type === 'range' ? parseFloat(el.value) : el.value;
     localStorage.setItem('font', JSON.stringify(fontSettings));
     updateFontPreview();
   };
 });
 function updateFontPreview() {
-  fontPreview.style.cssText = `font-family:${fontSettings.fn};color:${fontSettings.fc};background:${fontSettings.bg};-webkit-text-stroke:${fontSettings.ol};text-shadow:${fontSettings.sh}`;
+  applyFontStyle(fontPreview, fontSettings);
 }
 updateFontPreview();
 
 document.getElementById('reset-font').onclick = () => {
   fontSettings = {...DEFAULT_FONT};
   localStorage.setItem('font', JSON.stringify(fontSettings));
-  ['font-family','font-color','font-bg','font-outline','font-shadow'].forEach(id => {
-    const el = document.getElementById(id);
-    const key = { 'font-family':'fn','font-color':'fc','font-bg':'bg','font-outline':'ol','font-shadow':'sh' }[id];
-    el.value = fontSettings[key];
+  fontKeys.forEach(({id, key}) => {
+    document.getElementById(id).value = fontSettings[key];
   });
   updateFontPreview();
 };
@@ -293,9 +313,7 @@ function appendMessage(msg, scroll) {
     bubble.textContent = msg.message;
   }
 
-  if (fontSettings && msg.font) {
-    bubble.style.cssText += `;font-family:${msg.font.fn||'inherit'};color:${msg.font.fc||'inherit'};background:${msg.font.bg||'#21262d'};-webkit-text-stroke:${msg.font.ol||'none'};text-shadow:${msg.font.sh||'none'}`;
-  }
+  if (msg.font) applyFontStyle(bubble, msg.font);
 
   const rb = document.createElement('span');
   rb.style.cssText = 'font-size:11px;color:#8b949e;cursor:pointer;margin-top:2px';
@@ -475,7 +493,7 @@ function addSystemMsg(text) {
 sendBtn.onclick = sendMessage;
 input.onkeydown = (e) => {
   if (e.key === 'Enter' && !autocomplete.classList.contains('show') && !emoteGrid.classList.contains('show')) sendMessage();
-  else if (e.key === 'Tab' && autocomplete.classList.contains('show')) { e.preventDefault(); completeCommand(); }
+  else if ((e.key === 'Tab' || e.key === ' ') && autocomplete.classList.contains('show')) { e.preventDefault(); completeCommand(); }
   else if (e.key === 'ArrowDown' && autocomplete.classList.contains('show')) { e.preventDefault(); selectedCmdIdx = Math.min(selectedCmdIdx+1, filteredCommands.length-1); updateAutocompleteSelection(); }
   else if (e.key === 'ArrowUp' && autocomplete.classList.contains('show')) { e.preventDefault(); selectedCmdIdx = Math.max(selectedCmdIdx-1, 0); updateAutocompleteSelection(); }
   else if (e.key === 'Escape') { hideAutocomplete(); emoteGrid.classList.remove('show'); }
