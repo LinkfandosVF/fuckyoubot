@@ -70,6 +70,22 @@ body{background:#0d1117;color:#e6edf3;font-family:-apple-system,BlinkMacSystemFo
 #emote-grid .emote-item{width:40px;height:40px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:4px}
 #emote-grid .emote-item:hover{background:#21262d}
 #emote-grid .emote-item img{max-width:32px;max-height:32px}
+#link-panel{display:none;position:absolute;top:44px;right:16px;background:#161b22;border:1px solid #30363d;border-radius:8px;padding:16px;width:300px;box-shadow:0 4px 16px rgba(0,0,0,.4);z-index:100}
+#link-panel.show{display:block}
+#link-panel h3{font-size:14px;margin-bottom:12px;color:#e6edf3}
+#link-panel label{font-size:12px;color:#8b949e;display:block;margin-top:8px;margin-bottom:4px}
+#link-panel input,#link-panel select{width:100%;padding:8px;border:1px solid #30363d;border-radius:6px;font-size:13px;background:#0d1117;color:#e6edf3;outline:none}
+#link-panel input:focus,#link-panel select:focus{border-color:#58a6ff}
+#link-panel .link-btn{width:100%;margin-top:10px;padding:8px;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer}
+#link-panel .link-btn.link{background:#238636;color:#fff}
+#link-panel .link-btn.link:hover{background:#2ea043}
+#link-panel .link-btn.unlink{background:#da3633;color:#fff}
+#link-panel .link-btn.unlink:hover{background:#f85149}
+#link-panel .link-status{font-size:12px;margin-top:8px;padding:6px 8px;border-radius:4px;display:none}
+#link-panel .link-status.ok{display:block;background:#1a3a2a;color:#3fb950}
+#link-panel .link-status.err{display:block;background:#3a1a1a;color:#f85149}
+#link-btn{background:none;border:1px solid #30363d;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:14px;color:#8b949e}
+#link-btn:hover{background:#21262d}
 </style>
 </head>
 <body>
@@ -77,6 +93,7 @@ body{background:#0d1117;color:#e6edf3;font-family:-apple-system,BlinkMacSystemFo
   <h1>Chat</h1>
   <div id="menu-right">
     <button id="settings-btn">Aa</button>
+    <button id="link-btn" title="Link accounts">⛓</button>
     <div id="nick-display"><span class="status-dot connected" id="status-dot"></span><span id="current-nick">User</span></div>
   </div>
 </div>
@@ -155,6 +172,21 @@ body{background:#0d1117;color:#e6edf3;font-family:-apple-system,BlinkMacSystemFo
   <button class="reset-btn" id="reset-font">Reset to Defaults</button>
   <div class="font-preview" id="font-preview">AaBbYy</div>
 </div>
+<div id="link-panel">
+  <h3>Account Linking</h3>
+  <label>Platform</label>
+  <select id="link-platform">
+    <option value="twitch">Twitch</option>
+    <option value="youtube">YouTube</option>
+  </select>
+  <label>Username</label>
+  <input id="link-username" type="text" placeholder="e.g. mrpemmfub">
+  <label>Password</label>
+  <input id="link-password" type="password" placeholder="Set or reuse a password">
+  <button class="link-btn link" id="link-do-link">Link Account</button>
+  <button class="link-btn unlink" id="link-do-unlink">Unlink Account</button>
+  <div class="link-status" id="link-status"></div>
+</div>
 <div id="messages"></div>
 <div id="reply-bar">
   <span class="reply-to">Replying to <strong id="reply-user"></strong>: <span id="reply-text"></span></span>
@@ -226,7 +258,32 @@ const emoteGrid = document.getElementById('emote-grid');
 const fontPreview = document.getElementById('font-preview');
 
 nickDisplay.textContent = username;
-settingsBtn.onclick = () => settingsPanel.classList.toggle('show');
+settingsBtn.onclick = () => { settingsPanel.classList.toggle('show'); linkPanel.classList.remove('show'); };
+
+const linkBtn = document.getElementById('link-btn');
+const linkPanel = document.getElementById('link-panel');
+const linkPlatform = document.getElementById('link-platform');
+const linkUsername = document.getElementById('link-username');
+const linkPassword = document.getElementById('link-password');
+const linkStatus = document.getElementById('link-status');
+
+linkBtn.onclick = () => { linkPanel.classList.toggle('show'); settingsPanel.classList.remove('show'); linkStatus.className = 'link-status'; };
+
+function linkDo(pwOk) {
+  const p = linkPlatform.value;
+  const u = linkUsername.value.trim();
+  const pw = linkPassword.value.trim();
+  if (!u || !pw) { linkStatus.className = 'link-status err'; linkStatus.textContent = 'Fill in all fields'; return; }
+  if (pwOk) socket.emit('link:link', { platform: p, username: u, password: pw, nick: username, font: fontSettings });
+  else socket.emit('link:unlink', { platform: p, username: u, password: pw });
+}
+document.getElementById('link-do-link').onclick = () => linkDo(true);
+document.getElementById('link-do-unlink').onclick = () => linkDo(false);
+socket.on('link:result', (res) => {
+  linkStatus.className = `link-status ${res.success ? 'ok' : 'err'}`;
+  linkStatus.textContent = res.message;
+  linkPassword.value = '';
+});
 
 function applyFontStyle(el, f) {
   const ol = f.ol > 0 ? `${f.ol}px solid ${f.olc}` : 'none';
@@ -353,8 +410,6 @@ socket.on('history', (msgs) => {
 });
 
 socket.on('message', (msg) => { appendMessage(msg, true); });
-
-socket.on('link:result', (res) => addSystemMsg(res.success ? `✅ ${res.message}` : `❌ ${res.message}`));
 
 const EFFECT_DURATION = 5000;
 const FADE_DURATION = 1000;
@@ -592,13 +647,13 @@ function sendMessage() {
       if (parts.length >= 4) {
         socket.emit('link:link', { platform: parts[1].toLowerCase(), username: parts[2], password: parts[3], nick: username, font: fontSettings });
         input.value = ''; hideAutocomplete(); return;
-      } else { addSystemMsg('Usage: /link <twitch|youtube> <username> <password>'); input.value = ''; hideAutocomplete(); return; }
+      } else { linkPanel.classList.toggle('show'); settingsPanel.classList.remove('show'); input.value = ''; hideAutocomplete(); return; }
     }
     if (cmd === '/unlink') {
       if (parts.length >= 4) {
         socket.emit('link:unlink', { platform: parts[1].toLowerCase(), username: parts[2], password: parts[3] });
         input.value = ''; hideAutocomplete(); return;
-      } else { addSystemMsg('Usage: /unlink <twitch|youtube> <username> <password>'); input.value = ''; hideAutocomplete(); return; }
+      } else { linkPanel.classList.toggle('show'); settingsPanel.classList.remove('show'); input.value = ''; hideAutocomplete(); return; }
     }
     addSystemMsg(`Unknown command: ${cmd}`);
     input.value = ''; hideAutocomplete(); return;
