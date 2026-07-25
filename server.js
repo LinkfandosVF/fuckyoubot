@@ -164,7 +164,7 @@ async function checkYTLive() {
 findYTChannel().then(() => { checkYTLive(); setInterval(checkYTLive, 60000); });
 
 io.on('connection', (socket) => {
-  socket.emit('history', messages);
+  socket.emit('history', messages.slice(-50));
   socket.on('sendMessage', (data) => {
     addMessage(data.source || 'custom', data.username, data.message, data.replyTo || null, null, null, data.effect || null, data.font || null);
   });

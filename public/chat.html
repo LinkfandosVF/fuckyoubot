@@ -210,7 +210,7 @@ socket.on('nickChanged', (nick) => { username = nick; nickDisplay.textContent = 
 
 socket.on('history', (msgs) => {
   messagesEl.innerHTML = '';
-  for (const m of msgs) appendMessage(m, false);
+  for (const m of msgs.slice(-30)) appendMessage(m, false);
   scrollToBottom();
 });
 
