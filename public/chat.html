@@ -71,6 +71,12 @@ body{background:#0d1117;color:#e6edf3;font-family:-apple-system,BlinkMacSystemFo
 #emote-grid .emote-item{width:40px;height:40px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:4px}
 #emote-grid .emote-item:hover{background:#21262d}
 #emote-grid .emote-item img{max-width:32px;max-height:32px}
+.toggle-switch{position:relative;display:inline-block;width:36px;height:20px;flex-shrink:0;cursor:pointer}
+.toggle-switch input{opacity:0;width:0;height:0}
+.toggle-switch .slider{position:absolute;inset:0;background:#30363d;border-radius:10px;transition:.3s}
+.toggle-switch .slider::before{content:'';position:absolute;width:16px;height:16px;border-radius:50%;background:#8b949e;top:2px;left:2px;transition:.3s}
+.toggle-switch input:checked + .slider{background:#238636}
+.toggle-switch input:checked + .slider::before{background:#fff;transform:translateX(16px)}
 #link-panel{display:none;position:absolute;top:44px;right:16px;background:#161b22;border:1px solid #30363d;border-radius:8px;padding:16px;width:300px;box-shadow:0 4px 16px rgba(0,0,0,.4);z-index:100}
 #link-panel.show{display:block}
 #link-panel h3{font-size:14px;margin-bottom:12px;color:#e6edf3}
@@ -172,6 +178,18 @@ body{background:#0d1117;color:#e6edf3;font-family:-apple-system,BlinkMacSystemFo
       <span style="font-size:11px;color:#8b949e;text-align:right;min-width:24px" id="font-sho-val">0%</span>
     </div>
   </div>
+  <h3 style="margin-top:16px">Username Color</h3>
+  <label>Override Color</label>
+  <input type="color" id="user-color" value="#e6edf3">
+  <label style="display:flex;align-items:center;justify-content:space-between;margin-top:8px">
+    <span>Gradient</span>
+    <label class="toggle-switch">
+      <input type="checkbox" id="user-color-gradient">
+      <span class="slider"></span>
+    </label>
+  </label>
+  <label id="user-color2-row">Gradient End Color</label>
+  <input type="color" id="user-color2" value="#58a6ff">
   <button class="reset-btn" id="reset-font">Reset to Defaults</button>
   <div class="font-preview" id="font-preview">AaBbYy</div>
 </div>
@@ -367,6 +385,13 @@ let fontSettings = (() => {
   return {...DEFAULT_FONT, ...parsed};
 })();
 
+const DEFAULT_USER_COLOR = {color:'#e6edf3',color2:'#58a6ff',gradient:false};
+let userColorSettings = (() => {
+  const raw = localStorage.getItem('userColor');
+  if (!raw) return {...DEFAULT_USER_COLOR};
+  return {...DEFAULT_USER_COLOR, ...JSON.parse(raw)};
+})();
+
 const messagesEl = document.getElementById('messages');
 const input = document.getElementById('msg-input');
 const sendBtn = document.getElementById('send-btn');
@@ -502,7 +527,45 @@ document.getElementById('reset-font').onclick = () => {
   updateFontPreview();
 };
 
-// sync preset selects to current values on load
+function updateUserColorPreview() {
+  const preview = document.getElementById('user-color-preview');
+  if (!preview) return;
+  if (userColorSettings.gradient && userColorSettings.color2) {
+    preview.style.background = `linear-gradient(90deg, ${userColorSettings.color}, ${userColorSettings.color2})`;
+    preview.style.webkitBackgroundClip = 'text';
+    preview.style.webkitTextFillColor = 'transparent';
+    preview.style.backgroundClip = 'text';
+    preview.style.color = 'transparent';
+  } else {
+    preview.style.background = '';
+    preview.style.webkitTextFillColor = '';
+    preview.style.backgroundClip = '';
+    preview.style.color = userColorSettings.color;
+  }
+}
+
+const userColorEls = [
+  {id:'user-color', key:'color'},
+  {id:'user-color2', key:'color2'},
+  {id:'user-color-gradient', key:'gradient'},
+];
+userColorEls.forEach(({id, key}) => {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (el.type === 'checkbox') el.checked = userColorSettings[key];
+  else el.value = userColorSettings[key] !== undefined ? userColorSettings[key] : el.value;
+  el.oninput = () => {
+    if (el.type === 'checkbox') userColorSettings[key] = el.checked;
+    else userColorSettings[key] = el.value;
+    localStorage.setItem('userColor', JSON.stringify(userColorSettings));
+    document.getElementById('user-color2-row').style.display = userColorSettings.gradient ? '' : 'none';
+    document.getElementById('user-color2').style.display = userColorSettings.gradient ? '' : 'none';
+    updateUserColorPreview();
+  };
+});
+document.getElementById('user-color2-row').style.display = userColorSettings.gradient ? '' : 'none';
+document.getElementById('user-color2').style.display = userColorSettings.gradient ? '' : 'none';
+updateUserColorPreview();
 (function syncPresets() {
   const olp = document.getElementById('font-ol-preset');
   const shp = document.getElementById('font-sh-preset');
@@ -595,7 +658,16 @@ function appendMessage(msg, scroll) {
   const un = document.createElement('span');
   un.className = 'un';
   un.textContent = msg.username;
-  if (msg.source === 'twitch' && msg.color) un.style.color = msg.color;
+  if (msg.userColor) {
+    if (msg.userColor.gradient && msg.userColor.color2) {
+      un.style.background = `linear-gradient(90deg, ${msg.userColor.color}, ${msg.userColor.color2})`;
+      un.style.webkitBackgroundClip = 'text';
+      un.style.webkitTextFillColor = 'transparent';
+      un.style.backgroundClip = 'text';
+    } else {
+      un.style.color = msg.userColor.color;
+    }
+  } else if (msg.source === 'twitch' && msg.color) un.style.color = msg.color;
   userRow.appendChild(un);
   if (msg.linked) {
     const li = document.createElement('span');
@@ -787,19 +859,19 @@ function sendMessage() {
     }
     if (cmd === '/wave' && parts.length > 1) {
       const msg = parts.slice(1).join(' ');
-      socket.emit('sendMessage', { username, message: msg, source: sourceSelect.value, effect: 'wave', font: fontSettings });
+      socket.emit('sendMessage', { username, message: msg, source: sourceSelect.value, effect: 'wave', font: fontSettings, userColor: userColorSettings });
       input.value = ''; currentReply = null; replyBar.classList.remove('show'); hideAutocomplete(); return;
     }
     if (cmd === '/rainbow' && parts.length > 1) {
       const msg = parts.slice(1).join(' ');
-      socket.emit('sendMessage', { username, message: msg, source: sourceSelect.value, effect: 'rainbow', font: fontSettings });
+      socket.emit('sendMessage', { username, message: msg, source: sourceSelect.value, effect: 'rainbow', font: fontSettings, userColor: userColorSettings });
       input.value = ''; currentReply = null; replyBar.classList.remove('show'); hideAutocomplete(); return;
     }
     if (cmd === '/flag' && parts.length > 2) {
       const fname = parts[1].toLowerCase();
       const msg = parts.slice(2).join(' ');
       if (flags[fname]) {
-        socket.emit('sendMessage', { username, message: msg, source: sourceSelect.value, effect: `flag:${fname}`, font: fontSettings });
+        socket.emit('sendMessage', { username, message: msg, source: sourceSelect.value, effect: `flag:${fname}`, font: fontSettings, userColor: userColorSettings });
         input.value = ''; currentReply = null; replyBar.classList.remove('show'); hideAutocomplete(); return;
       } else addSystemMsg(`Unknown flag: ${fname}. Available: ${Object.keys(flags).join(', ')}`);
       input.value = ''; hideAutocomplete(); return;
@@ -820,7 +892,7 @@ function sendMessage() {
     input.value = ''; hideAutocomplete(); return;
   }
 
-  socket.emit('sendMessage', { username, message: text, replyTo: currentReply || undefined, source: sourceSelect.value, font: fontSettings });
+  socket.emit('sendMessage', { username, message: text, replyTo: currentReply || undefined, source: sourceSelect.value, font: fontSettings, userColor: userColorSettings });
   input.value = '';
   currentReply = null;
   replyBar.classList.remove('show');

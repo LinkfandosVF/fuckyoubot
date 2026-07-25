@@ -140,7 +140,7 @@ async function sendToDiscord(source, username, text, replyTo, timestamp, color, 
   catch (e) { console.log('Discord webhook failed:', e.message); }
 }
 
-function addMessage(source, username, text, replyTo = null, timestamp = null, color = null, effect = null, font = null, emotes = null) {
+function addMessage(source, username, text, replyTo = null, timestamp = null, color = null, effect = null, font = null, emotes = null, userColor = null) {
   const id = ++msgId;
   const ts = timestamp || Date.now();
   let displayName = username;
@@ -157,6 +157,7 @@ function addMessage(source, username, text, replyTo = null, timestamp = null, co
   const parsedHtml = source === 'twitch' ? preParseTwitchEmotes(text, emotes) : parseEmotes(text);
   const msg = { id, source, username: displayName, message: text, timestamp: ts, replyTo, color, effect, font: displayFont, emotes, parsedHtml };
   if (linked) msg.linked = true;
+  if (userColor) msg.userColor = userColor;
   messages.push(msg);
   if (messages.length > 500) messages.shift();
   io.emit('message', msg);
@@ -238,7 +239,7 @@ io.on('connection', (socket) => {
   socket.emit('history', messages.slice(-50));
   socket.on('sendMessage', (data) => {
     console.log('sendMessage received:', data.source, data.username, data.message?.slice(0,20));
-    addMessage(data.source || 'custom', data.username, data.message, data.replyTo || null, null, null, data.effect || null, data.font || null);
+    addMessage(data.source || 'custom', data.username, data.message, data.replyTo || null, null, null, data.effect || null, data.font || null, null, data.userColor || null);
   });
   socket.on('command', (data) => {
     if (data.command === 'nick' && data.args) socket.emit('nickChanged', data.args);

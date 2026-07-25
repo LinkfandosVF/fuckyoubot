@@ -285,7 +285,16 @@ function applySettings() {
       user.style.background = '';
       user.style.webkitTextFillColor = '';
       user.style.color = '';
-      if (m.linked && settings.linkColor) {
+      if (m.userColor) {
+        if (m.userColor.gradient && m.userColor.color2) {
+          user.style.background = `linear-gradient(90deg, ${m.userColor.color}, ${m.userColor.color2})`;
+          user.style.webkitBackgroundClip = 'text';
+          user.style.webkitTextFillColor = 'transparent';
+          user.style.backgroundClip = 'text';
+        } else {
+          user.style.color = m.userColor.color;
+        }
+      } else if (m.linked && settings.linkColor) {
         applyLinkedColor(user);
       } else {
         if (m.source === 'twitch' && m.color && settings.twitchColor) user.style.color = m.color;
@@ -489,7 +498,16 @@ function appendMessage(msg, fromHistory) {
   const user = document.createElement('span');
   user.className = 'user';
   user.textContent = msg.username + ':';
-  if (msg.linked && settings.linkColor) {
+  if (msg.userColor) {
+    if (msg.userColor.gradient && msg.userColor.color2) {
+      user.style.background = `linear-gradient(90deg, ${msg.userColor.color}, ${msg.userColor.color2})`;
+      user.style.webkitBackgroundClip = 'text';
+      user.style.webkitTextFillColor = 'transparent';
+      user.style.backgroundClip = 'text';
+    } else {
+      user.style.color = msg.userColor.color;
+    }
+  } else if (msg.linked && settings.linkColor) {
     applyLinkedColor(user);
   } else {
     if (msg.source === 'twitch' && msg.color && settings.twitchColor) user.style.color = msg.color;
