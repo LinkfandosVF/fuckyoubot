@@ -55,15 +55,23 @@ function stripMeta(text) {
   return text.slice(0, start) + text.slice(end + 1);
 }
 
-async function sendToDiscord(source, username, text, replyTo, timestamp) {
+async function sendToDiscord(source, username, text, replyTo, timestamp, color, effect, font) {
   const ts = Math.floor((timestamp || Date.now()) / 1000);
   const tsLine = `-# <t:${ts}:R>`;
   let displayText, webhookUser;
   const meta = { u: username, s: source, t: ts * 1000 };
+  if (color) meta.c = color;
+  if (effect) meta.e = effect;
+  if (font) meta.f = font;
+
+  let effectTag = '';
+  if (effect === 'wave') effectTag = ' [wave]';
+  else if (effect === 'rainbow') effectTag = ' [rainbow]';
+  else if (effect && effect.startsWith('flag:')) effectTag = ` [${effect}]`;
 
   if (source === 'twitch') { displayText = `[Twitch] ${username}: ${text}`; webhookUser = 'Twitch'; }
   else if (source === 'youtube') { displayText = `[YouTube] ${username}: ${text}`; webhookUser = 'YouTube'; }
-  else { displayText = text; webhookUser = username; }
+  else { displayText = text + effectTag; webhookUser = username; }
 
   if (replyTo) {
     meta.r = { u: replyTo.username, m: replyTo.message };
@@ -74,14 +82,14 @@ async function sendToDiscord(source, username, text, replyTo, timestamp) {
   catch (e) { console.log('Discord webhook failed:', e.message); }
 }
 
-function addMessage(source, username, text, replyTo = null, timestamp = null) {
+function addMessage(source, username, text, replyTo = null, timestamp = null, color = null, effect = null, font = null) {
   const id = ++msgId;
   const ts = timestamp || Date.now();
-  const msg = { id, source, username, message: text, timestamp: ts, replyTo };
+  const msg = { id, source, username, message: text, timestamp: ts, replyTo, color, effect, font };
   messages.push(msg);
   if (messages.length > 500) messages.shift();
   io.emit('message', msg);
-  sendToDiscord(source, username, text, replyTo, ts);
+  sendToDiscord(source, username, text, replyTo, ts, color, effect, font);
   sendToTwitch(source, username, text);
 }
 
@@ -93,7 +101,7 @@ twitchReader.connect().catch(e => console.log('Twitch reader:', e.message));
 twitchReader.on('connected', () => console.log('Twitch reader connected - listening to', TWITCH_CHANNEL));
 twitchReader.on('message', (channel, tags, message) => {
   const ts = tags['tmi-sent-ts'] ? parseInt(tags['tmi-sent-ts']) : null;
-  addMessage('twitch', tags['display-name'] || tags.username, message, null, ts);
+  addMessage('twitch', tags['display-name'] || tags.username, message, null, ts, tags.color || null);
 });
 
 let twitchWriter = null;
@@ -110,10 +118,7 @@ function sendToTwitch(source, username, text) {
   twitchWriter.say(TWITCH_CHANNEL.toLowerCase(), `[${prefix}] ${username}: ${text}`).catch(e => console.log('Twitch say:', e.message));
 }
 
-let ytChannelId = null;
-let ytLiveChatId = null;
-let ytNextPage = '';
-let ytPollTimer = null;
+let ytChannelId = null, ytLiveChatId = null, ytNextPage = '', ytPollTimer = null;
 
 async function findYTChannel() {
   if (!YOUTUBE_API_KEY) return;
@@ -125,8 +130,7 @@ async function findYTChannel() {
 }
 
 async function checkYTLive() {
-  if (!YOUTUBE_API_KEY || !ytChannelId) return;
-  if (ytLiveChatId) return; // already connected
+  if (!YOUTUBE_API_KEY || !ytChannelId || ytLiveChatId) return;
   try {
     const liveRes = await axios.get('https://www.googleapis.com/youtube/v3/search', { params: { part: 'id', channelId: ytChannelId, eventType: 'live', type: 'video', key: YOUTUBE_API_KEY } });
     const videoId = liveRes.data.items?.[0]?.id?.videoId;
@@ -135,15 +139,16 @@ async function checkYTLive() {
     ytLiveChatId = vidRes.data.items?.[0]?.liveStreamingDetails?.activeLiveChatId;
     if (!ytLiveChatId) return;
     console.log('YouTube live chat connected');
-
     try {
       const initRes = await axios.get('https://www.googleapis.com/youtube/v3/liveChat/messages', { params: { part: 'snippet,authorDetails', liveChatId: ytLiveChatId, key: YOUTUBE_API_KEY } });
       ytNextPage = initRes.data.nextPageToken || '';
       const items = (initRes.data.items || []).slice(-10);
-      for (const item of items) addMessage('youtube', item.authorDetails.displayName, item.snippet.displayMessage, null, new Date(item.snippet.publishedAt).getTime());
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        setTimeout(() => addMessage('youtube', item.authorDetails.displayName, item.snippet.displayMessage, null, new Date(item.snippet.publishedAt).getTime()), i * 300);
+      }
       console.log('YouTube backfill:', items.length, 'messages');
     } catch {}
-
     if (ytPollTimer) clearInterval(ytPollTimer);
     ytPollTimer = setInterval(async () => {
       if (!ytLiveChatId) return;
@@ -156,15 +161,12 @@ async function checkYTLive() {
   } catch {}
 }
 
-findYTChannel().then(() => {
-  checkYTLive();
-  setInterval(checkYTLive, 60000); // recheck every 60s for stream start
-});
+findYTChannel().then(() => { checkYTLive(); setInterval(checkYTLive, 60000); });
 
 io.on('connection', (socket) => {
   socket.emit('history', messages);
   socket.on('sendMessage', (data) => {
-    addMessage(data.source || 'discord', data.username, data.message, data.replyTo || null);
+    addMessage(data.source || 'custom', data.username, data.message, data.replyTo || null, null, null, data.effect || null, data.font || null);
   });
   socket.on('command', (data) => {
     if (data.command === 'nick' && data.args) socket.emit('nickChanged', data.args);

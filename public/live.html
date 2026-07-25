@@ -5,42 +5,32 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Live</title>
 <style>
-@keyframes slideIn {
-  0% { opacity: 0; transform: translateY(20px) scale(0.97); }
-  100% { opacity: 1; transform: translateY(0) scale(1); }
-}
-@keyframes glow {
-  0%, 100% { box-shadow: 0 0 4px rgba(88,166,255,0.3); }
-  50% { box-shadow: 0 0 12px rgba(88,166,255,0.6); }
-}
-@keyframes badgePop {
-  0% { transform: scale(0); }
-  60% { transform: scale(1.15); }
-  100% { transform: scale(1); }
-}
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { background: transparent; font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif; overflow: hidden; height: 100vh; }
-#messages { display: flex; flex-direction: column; gap: 6px; padding: 16px; height: 100vh; overflow: hidden; justify-content: flex-end; }
-.msg { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 10px; background: rgba(13,17,23,0.75); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgba(48,54,61,0.5); animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards, glow 3s ease-in-out 0.4s infinite; }
-.msg .badge { font-size: 9px; font-weight: 700; padding: 2px 8px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px; animation: badgePop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s both; flex-shrink: 0; }
-.badge-twitch { background: linear-gradient(135deg, #9147ff, #772ce8); color: #fff; box-shadow: 0 0 8px rgba(145,71,255,0.4); }
-.badge-youtube { background: linear-gradient(135deg, #ff0033, #cc0000); color: #fff; box-shadow: 0 0 8px rgba(255,0,51,0.4); }
-.badge-discord { background: linear-gradient(135deg, #5865f2, #4752c4); color: #fff; box-shadow: 0 0 8px rgba(88,101,242,0.4); }
-.badge-custom { background: linear-gradient(135deg, #238636, #1a6b2e); color: #fff; box-shadow: 0 0 8px rgba(35,134,54,0.4); }
-.msg .user { font-weight: 700; font-size: 14px; flex-shrink: 0; }
-.msg .user-twitch { color: #b877ff; }
-.msg .user-youtube { color: #ff4466; }
-.msg .user-discord { color: #7984f5; }
-.msg .user-custom { color: #3fb950; }
-.msg .text { font-size: 14px; color: #e6edf3; word-break: break-word; flex: 1; line-height: 1.4; }
-.msg .reply-indicator { font-size: 12px; color: #8b949e; display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
-.msg .reply-indicator::before { content: '↩'; }
-.msg .reply-indicator .ru { color: #58a6ff; font-weight: 600; }
-.msg .time { font-size: 11px; color: #484f58; flex-shrink: 0; }
-@media (prefers-reduced-motion: reduce) {
-  .msg { animation: none; }
-  .msg .badge { animation: none; }
-}
+@keyframes slideIn{0%{opacity:0;transform:translateY(20px) scale(.97)}100%{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes glow{0%,100%{box-shadow:0 0 4px rgba(88,166,255,.3)}50%{box-shadow:0 0 12px rgba(88,166,255,.6)}}
+@keyframes badgePop{0%{transform:scale(0)}60%{transform:scale(1.15)}100%{transform:scale(1)}}
+@keyframes wave{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+@keyframes rainbow{0%{filter:hue-rotate(0deg)}100%{filter:hue-rotate(360deg)}}
+@keyframes flagAnim{0%{background-position:0% 50%}100%{background-position:100% 50%}}
+.wave-text span{display:inline-block;animation:wave .4s ease-in-out infinite}
+.rainbow-text{animation:rainbow 1s linear infinite;color:#f00!important}
+.flag-text{background-size:200% 100%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:flagAnim 3s linear infinite}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:transparent;font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;overflow:hidden;height:100vh}
+#messages{display:flex;flex-direction:column;gap:6px;padding:16px;height:100vh;overflow:hidden;justify-content:flex-end}
+.msg{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:10px;background:rgba(13,17,23,0.75);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(48,54,61,0.5);animation:slideIn .4s cubic-bezier(.16,1,.3,1) forwards,glow 3s ease-in-out .4s infinite}
+.msg .badge{font-size:9px;font-weight:700;padding:2px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:.5px;animation:badgePop .3s cubic-bezier(.34,1.56,.64,1) .1s both;flex-shrink:0}
+.badge-twitch{background:linear-gradient(135deg,#9147ff,#772ce8);color:#fff;box-shadow:0 0 8px rgba(145,71,255,.4)}
+.badge-youtube{background:linear-gradient(135deg,#ff0033,#cc0000);color:#fff;box-shadow:0 0 8px rgba(255,0,51,.4)}
+.badge-discord{background:linear-gradient(135deg,#5865f2,#4752c4);color:#fff;box-shadow:0 0 8px rgba(88,101,242,.4)}
+.badge-custom,.badge-bonebrg{background:linear-gradient(135deg,#238636,#1a6b2e);color:#fff;box-shadow:0 0 8px rgba(35,134,54,.4)}
+.msg .user{font-weight:700;font-size:14px;flex-shrink:0}
+.msg .text{font-size:14px;color:#e6edf3;word-break:break-word;flex:1;line-height:1.4}
+.msg .reply-indicator{font-size:12px;color:#8b949e;display:flex;align-items:center;gap:4px;flex-shrink:0}
+.msg .reply-indicator::before{content:'↩'}
+.msg .reply-indicator .ru{color:#58a6ff;font-weight:600}
+.msg .time{font-size:11px;color:#484f58;flex-shrink:0}
+.msg .effect-tag{font-size:10px;color:#8b949e;margin-left:4px;cursor:pointer;border-bottom:1px dotted #555}
+@media(prefers-reduced-motion:reduce){.msg{animation:none}.msg .badge{animation:none}.wave-text span{animation:none}.rainbow-text{animation:none}.flag-text{animation:none}}
 </style>
 </head>
 <body>
@@ -50,35 +40,82 @@ body { background: transparent; font-family: 'Segoe UI', -apple-system, BlinkMac
 const socket = io();
 const messagesEl = document.getElementById('messages');
 const MAX_VISIBLE = 30;
+const flags = {
+  pride: ['#ff0000','#ff8c00','#ffff00','#008000','#0000ff','#4b0082','#8b00ff'],
+  trans: ['#55cdfc','#f7a8b8','#fff','#f7a8b8','#55cdfc'],
+  bi: ['#d60270','#d60270','#9b4f96','#0038a8','#0038a8'],
+  pan: ['#ff218c','#ffd800','#21b1ff'],
+  nb: ['#fcf434','#fff','#9c59d1','#2c2c2c'],
+  lesbian: ['#d52d00','#ef7627','#ff9a56','#fff','#d162a4','#b55690','#a30262'],
+  ace: ['#000','#a4a4a4','#fff','#810081'],
+  aro: ['#3da542','#a7d379','#fff','#a7d379','#3da542'],
+  mlm: ['#078585','#98e8e8','#fff','#98e8e8','#078585'],
+  genderfluid: ['#ff76a4','#fff','#bf11d','#000','#303cbe'],
+  agender: ['#000','#bababa','#fff','#baf484','#fff','#bababa','#000']
+};
 
 function stripMeta(text) {
-  const start = text.indexOf('\u200D');
-  if (start === -1) return text;
-  const end = text.lastIndexOf('\u200D');
-  if (end === -1 || end <= start) return text;
-  return text.slice(0, start) + text.slice(end + 1);
+  const s = text.indexOf('\u200D'); if(s===-1)return text;
+  const e = text.lastIndexOf('\u200D'); if(e===-1||e<=s)return text;
+  return text.slice(0,s)+text.slice(e+1);
 }
 
 socket.on('history', (msgs) => {
   messagesEl.innerHTML = '';
-  const recent = msgs.slice(-MAX_VISIBLE);
-  for (const m of recent) appendMessage(m, true);
+  for (const m of msgs.slice(-MAX_VISIBLE)) appendMessage(m, true);
 });
 
 socket.on('message', (msg) => {
   appendMessage(msg, false);
-  while (messagesEl.children.length > MAX_VISIBLE) {
-    messagesEl.removeChild(messagesEl.firstChild);
-  }
+  while (messagesEl.children.length > MAX_VISIBLE) messagesEl.removeChild(messagesEl.firstChild);
 });
+
+function applyEffect(el, effect, text, font) {
+  let container = el;
+  if (effect === 'wave') {
+    el.classList.add('wave-text');
+    el.innerHTML = '';
+    for (const ch of text) {
+      const sp = document.createElement('span');
+      sp.textContent = ch === ' ' ? '\u00A0' : ch;
+      sp.style.animationDelay = Math.random() * .5 + 's';
+      el.appendChild(sp);
+    }
+  } else if (effect === 'rainbow') {
+    el.innerHTML = `<span class="rainbow-text">${text}</span>`;
+  } else if (effect && effect.startsWith('flag:')) {
+    const fname = effect.replace('flag:','');
+    const cols = flags[fname] || flags.pride;
+    el.innerHTML = `<span class="flag-text" style="background:linear-gradient(90deg,${cols.join(',')})">${text}</span>`;
+  }
+  if (effect) {
+    const et = document.createElement('span');
+    et.className = 'effect-tag';
+    et.textContent = effect.startsWith('flag:') ? effect.replace('flag:','') : effect;
+    et.onclick = () => { el.innerHTML = ''; applyEffect(el, effect, text, font); };
+    el.appendChild(et);
+    setTimeout(() => {
+      el.classList.remove('wave-text'); el.innerHTML = '';
+      const txt = document.createElement('span'); txt.className = 'text'; txt.textContent = text;
+      el.appendChild(txt);
+      if (effect) {
+        const et2 = document.createElement('span'); et2.className = 'effect-tag';
+        et2.textContent = effect.startsWith('flag:') ? effect.replace('flag:','') : effect;
+        et2.onclick = () => { el.innerHTML = ''; applyEffect(el, effect, text, font); };
+        el.appendChild(et2);
+      }
+    }, 5000);
+  }
+}
 
 function appendMessage(msg, fromHistory) {
   const div = document.createElement('div');
   div.className = 'msg';
 
+  const src = msg.source === 'custom' ? 'bonebrg' : msg.source;
   const badge = document.createElement('span');
-  badge.className = `badge badge-${msg.source}`;
-  badge.textContent = msg.source;
+  badge.className = `badge badge-${src}`;
+  badge.textContent = msg.source === 'custom' ? 'BONEBRG' : msg.source;
   div.appendChild(badge);
 
   if (msg.replyTo) {
@@ -89,25 +126,38 @@ function appendMessage(msg, fromHistory) {
   }
 
   const user = document.createElement('span');
-  user.className = `user user-${msg.source}`;
+  user.className = 'user';
   user.textContent = msg.username + ':';
+  if (msg.source === 'twitch' && msg.color) user.style.color = msg.color;
   div.appendChild(user);
 
   const text = document.createElement('span');
   text.className = 'text';
-  text.textContent = stripMeta(msg.message);
+  const cleanText = stripMeta(msg.message);
+  text.textContent = cleanText;
   div.appendChild(text);
+
+  if (msg.font) {
+    text.style.cssText = `font-family:${msg.font.fn||'inherit'};color:${msg.font.fc||'#e6edf3'};-webkit-text-stroke:${msg.font.ol||'none'};text-shadow:${msg.font.sh||'none'}`;
+    text.style.background = msg.font.bg || 'transparent';
+  }
 
   const time = document.createElement('span');
   time.className = 'time';
-  const d = new Date(msg.timestamp);
-  time.textContent = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  time.textContent = new Date(msg.timestamp).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
   div.appendChild(time);
 
-  messagesEl.appendChild(div);
-  if (!fromHistory) {
-    setTimeout(() => div.scrollIntoView({ behavior: 'smooth', block: 'end' }), 50);
+  if (msg.effect) {
+    const et = document.createElement('span');
+    et.className = 'effect-tag';
+    et.textContent = msg.effect.startsWith('flag:') ? msg.effect.replace('flag:','') : msg.effect;
+    et.onclick = () => applyEffect(text, msg.effect, cleanText, msg.font);
+    div.appendChild(et);
+    if (!fromHistory) setTimeout(() => applyEffect(text, msg.effect, cleanText, msg.font), 100);
   }
+
+  messagesEl.appendChild(div);
+  if (!fromHistory) setTimeout(() => div.scrollIntoView({ behavior:'smooth', block:'end' }), 50);
 }
 </script>
 </body>
