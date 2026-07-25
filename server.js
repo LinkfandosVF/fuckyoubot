@@ -1,5 +1,7 @@
 const express = require('express');
 const http = require('http');
+const fs = require('fs');
+const crypto = require('crypto');
 const { Server } = require('socket.io');
 const tmi = require('tmi.js');
 const axios = require('axios');
@@ -17,6 +19,18 @@ const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY || '';
 
 const messages = [];
 let msgId = 0;
+
+const LINKED_FILE = './linked_accounts.json';
+let linkedAccounts = [];
+function loadLinked() {
+  try {
+    if (fs.existsSync(LINKED_FILE)) linkedAccounts = JSON.parse(fs.readFileSync(LINKED_FILE, 'utf8'));
+  } catch (e) { console.log('linked_accounts load:', e.message); }
+}
+function saveLinked() {
+  try { fs.writeFileSync(LINKED_FILE, JSON.stringify(linkedAccounts, null, 2)); } catch {}
+}
+loadLinked();
 
 const ZW = { 0: '\u200B', 1: '\u200C' };
 const ZW_REV = { '\u200B': '0', '\u200C': '1' };
@@ -85,12 +99,22 @@ async function sendToDiscord(source, username, text, replyTo, timestamp, color, 
 function addMessage(source, username, text, replyTo = null, timestamp = null, color = null, effect = null, font = null) {
   const id = ++msgId;
   const ts = timestamp || Date.now();
-  const msg = { id, source, username, message: text, timestamp: ts, replyTo, color, effect, font };
+  let displayName = username;
+  let displayFont = font;
+  let linked = false;
+  const link = linkedAccounts.find(l => l.platform === source && l.username.toLowerCase() === username.toLowerCase());
+  if (link) {
+    linked = true;
+    if (link.nick) displayName = link.nick;
+    if (link.font) displayFont = link.font;
+  }
+  const msg = { id, source, username: displayName, message: text, timestamp: ts, replyTo, color, effect, font: displayFont };
+  if (linked) msg.linked = true;
   messages.push(msg);
   if (messages.length > 500) messages.shift();
   io.emit('message', msg);
-  sendToDiscord(source, username, text, replyTo, ts, color, effect, font);
-  sendToTwitch(source, username, text);
+  sendToDiscord(source, displayName, text, replyTo, ts, color, effect, displayFont);
+  sendToTwitch(source, displayName, text);
 }
 
 const TWITCH_BOT_USERNAME = process.env.TWITCH_BOT_USERNAME || '';
@@ -170,6 +194,37 @@ io.on('connection', (socket) => {
   });
   socket.on('command', (data) => {
     if (data.command === 'nick' && data.args) socket.emit('nickChanged', data.args);
+  });
+  socket.on('link:link', (data) => {
+    const { platform, username, password, nick, font } = data;
+    if (!['twitch', 'youtube'].includes(platform)) return socket.emit('link:result', { success: false, message: 'Invalid platform' });
+    if (!username || !password) return socket.emit('link:result', { success: false, message: 'Username and password required' });
+    const existing = linkedAccounts.find(l => l.platform === platform && l.username.toLowerCase() === username.toLowerCase());
+    if (existing) {
+      const hash = crypto.createHash('sha256').update(password + existing.salt).digest('hex');
+      if (hash !== existing.passwordHash) return socket.emit('link:result', { success: false, message: 'Wrong password' });
+      existing.nick = nick || existing.nick;
+      existing.font = font || existing.font;
+      saveLinked();
+      socket.emit('link:result', { success: true, message: `Updated link for ${platform}/${username}` });
+    } else {
+      const salt = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+      const passwordHash = crypto.createHash('sha256').update(password + salt).digest('hex');
+      linkedAccounts.push({ platform, username: username.toLowerCase(), passwordHash, salt, nick: nick || null, font: font || null });
+      saveLinked();
+      socket.emit('link:result', { success: true, message: `Linked ${platform}/${username}` });
+    }
+  });
+  socket.on('link:unlink', (data) => {
+    const { platform, username, password } = data;
+    const idx = linkedAccounts.findIndex(l => l.platform === platform && l.username.toLowerCase() === username.toLowerCase());
+    if (idx === -1) return socket.emit('link:result', { success: false, message: 'No link found' });
+    const existing = linkedAccounts[idx];
+    const hash = crypto.createHash('sha256').update(password + existing.salt).digest('hex');
+    if (hash !== existing.passwordHash) return socket.emit('link:result', { success: false, message: 'Wrong password' });
+    linkedAccounts.splice(idx, 1);
+    saveLinked();
+    socket.emit('link:result', { success: true, message: `Unlinked ${platform}/${username}` });
   });
 });
 

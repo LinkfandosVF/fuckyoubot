@@ -179,7 +179,9 @@ const commands = [
   { cmd: '/nick', desc: 'Change username', args: '<name>' },
   { cmd: '/wave', desc: 'Wavy text 5s', args: '<message>' },
   { cmd: '/rainbow', desc: 'Rainbow text 5s', args: '<message>' },
-  { cmd: '/flag', desc: 'Pride flag gradient', args: '<flag> <message>' }
+  { cmd: '/flag', desc: 'Pride flag gradient', args: '<flag> <message>' },
+  { cmd: '/link', desc: 'Link Twitch/YouTube account', args: '<twitch|youtube> <user> <password>' },
+  { cmd: '/unlink', desc: 'Unlink an account', args: '<twitch|youtube> <user> <password>' }
 ];
 const flags = {
   pride: ['#ff0000','#ff8c00','#ffff00','#008000','#0000ff','#4b0082','#8b00ff'],
@@ -352,6 +354,8 @@ socket.on('history', (msgs) => {
 
 socket.on('message', (msg) => { appendMessage(msg, true); });
 
+socket.on('link:result', (res) => addSystemMsg(res.success ? `✅ ${res.message}` : `❌ ${res.message}`));
+
 const EFFECT_DURATION = 5000;
 const FADE_DURATION = 1000;
 
@@ -382,6 +386,12 @@ function appendMessage(msg, scroll) {
   un.textContent = msg.username;
   if (msg.source === 'twitch' && msg.color) un.style.color = msg.color;
   userRow.appendChild(un);
+  if (msg.linked) {
+    const li = document.createElement('span');
+    li.textContent = '⛓';
+    li.style.cssText = 'font-size:10px;margin-left:3px;opacity:.5';
+    userRow.appendChild(li);
+  }
 
   const tm = document.createElement('span');
   tm.className = 'time';
@@ -576,6 +586,14 @@ function sendMessage() {
         socket.emit('sendMessage', { username, message: msg, source: sourceSelect.value, effect: `flag:${fname}`, font: fontSettings });
         input.value = ''; currentReply = null; replyBar.classList.remove('show'); hideAutocomplete(); return;
       } else addSystemMsg(`Unknown flag: ${fname}. Available: ${Object.keys(flags).join(', ')}`);
+      input.value = ''; hideAutocomplete(); return;
+    }
+    if (cmd === '/link' && parts.length >= 4) {
+      socket.emit('link:link', { platform: parts[1].toLowerCase(), username: parts[2], password: parts[3], nick: username, font: fontSettings });
+      input.value = ''; hideAutocomplete(); return;
+    }
+    if (cmd === '/unlink' && parts.length >= 4) {
+      socket.emit('link:unlink', { platform: parts[1].toLowerCase(), username: parts[2], password: parts[3] });
       input.value = ''; hideAutocomplete(); return;
     }
     addSystemMsg(`Unknown command: ${cmd}`);
