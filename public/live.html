@@ -10,16 +10,17 @@
 @keyframes glow{0%,100%{box-shadow:0 0 4px rgba(88,166,255,.3)}50%{box-shadow:0 0 12px rgba(88,166,255,.6)}}
 @keyframes badgePop{0%{transform:scale(0)}60%{transform:scale(1.15)}100%{transform:scale(1)}}
 @keyframes flagAnim{0%{background-position:0% 50%}100%{background-position:100% 50%}}
+@keyframes panelSlide{0%{transform:translateX(100%)}100%{transform:translateX(0)}}
 .flag-text{background-size:200% 100%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:flagAnim 3s linear infinite}
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:transparent;font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;overflow:hidden;height:100vh}
+body{background:transparent;font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;overflow:hidden;height:100vh;transition:background .3s}
 #messages{display:flex;flex-direction:column;gap:6px;padding:16px;height:100vh;overflow:hidden;justify-content:flex-end}
-.msg{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:10px;background:rgba(13,17,23,0.75);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(48,54,61,0.5);animation:slideIn .4s cubic-bezier(.16,1,.3,1) forwards,glow 3s ease-in-out .4s infinite}
+.msg{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:10px;background:rgba(13,17,23,0.75);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(48,54,61,0.5);animation:slideIn .4s cubic-bezier(.16,1,.3,1) forwards,glow 3s ease-in-out .4s infinite;transition:border-radius .3s,background .3s}
 .msg .badge{font-size:9px;font-weight:700;padding:2px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:.5px;animation:badgePop .3s cubic-bezier(.34,1.56,.64,1) .1s both;flex-shrink:0}
 .badge-twitch{background:linear-gradient(135deg,#9147ff,#772ce8);color:#fff;box-shadow:0 0 8px rgba(145,71,255,.4)}
 .badge-youtube{background:linear-gradient(135deg,#ff0033,#cc0000);color:#fff;box-shadow:0 0 8px rgba(255,0,51,.4)}
 .badge-discord{background:linear-gradient(135deg,#5865f2,#4752c4);color:#fff;box-shadow:0 0 8px rgba(88,101,242,.4)}
-.badge-custom,.badge-bonebrg{background:#fff;color:#000;box-shadow:none}
+.badge-custom,.badge-bonebrg{background:#fff;color:#000;box-shadow:0 0 8px rgba(255,255,255,.3)}
 .msg .user{font-weight:700;font-size:14px;flex-shrink:0}
 .msg .text{font-size:14px;color:#e6edf3;word-break:break-word;flex:1;line-height:1.4}
 .msg .reply-indicator{font-size:12px;color:#8b949e;display:flex;align-items:center;gap:4px;flex-shrink:0}
@@ -28,10 +29,78 @@ body{background:transparent;font-family:'Segoe UI',-apple-system,BlinkMacSystemF
 .msg .time{font-size:11px;color:#484f58;flex-shrink:0}
 .msg .effect-tag{font-size:10px;color:#8b949e;margin-left:4px;cursor:pointer;border-bottom:1px dotted #555}
 @media(prefers-reduced-motion:reduce){.msg{animation:none}.msg .badge{animation:none}.flag-text{animation:none}}
+
+#settings-toggle{position:fixed;bottom:16px;right:16px;width:40px;height:40px;border-radius:50%;background:rgba(13,17,23,.8);border:1px solid rgba(48,54,61,.5);color:#8b949e;font-size:20px;cursor:pointer;display:none;align-items:center;justify-content:center;z-index:100;backdrop-filter:blur(8px);transition:color .2s,background .2s}
+#settings-toggle:hover{color:#e6edf3;background:rgba(22,27,34,.9)}
+#settings-toggle.show{display:flex}
+#settings-panel{position:fixed;top:0;right:0;width:340px;height:100vh;background:rgba(13,17,23,.95);backdrop-filter:blur(12px);border-left:1px solid rgba(48,54,61,.5);z-index:200;display:none;flex-direction:column;animation:panelSlide .3s cubic-bezier(.16,1,.3,1)}
+#settings-panel.show{display:flex}
+#settings-panel .panel-header{display:flex;align-items:center;justify-content:space-between;padding:16px;border-bottom:1px solid #30363d;flex-shrink:0}
+#settings-panel .panel-header h2{font-size:15px;color:#e6edf3;font-weight:700}
+#settings-panel .panel-close{background:none;border:none;color:#8b949e;font-size:22px;cursor:pointer;padding:0 4px}
+#settings-panel .panel-close:hover{color:#f85149}
+#settings-panel .panel-body{flex:1;overflow-y:auto;padding:12px 16px 24px}
+#settings-panel section{margin-bottom:20px}
+#settings-panel section h3{font-size:13px;color:#8b949e;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #21262d}
+#settings-panel .setting{display:flex;align-items:center;justify-content:space-between;padding:6px 0;gap:12px}
+#settings-panel .setting label{font-size:13px;color:#e6edf3;flex:1}
+#settings-panel .setting input[type=color]{width:36px;height:30px;padding:0;border:1px solid #30363d;border-radius:4px;cursor:pointer;background:0;flex-shrink:0}
+#settings-panel .setting select{background:#0d1117;color:#e6edf3;border:1px solid #30363d;border-radius:4px;padding:4px 8px;font-size:12px;max-width:130px}
+#settings-panel .setting input[type=text]{background:#0d1117;color:#e6edf3;border:1px solid #30363d;border-radius:4px;padding:4px 8px;font-size:12px;flex:1;max-width:180px}
+.toggle-switch{position:relative;width:36px;height:20px;flex-shrink:0;cursor:pointer}
+.toggle-switch input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;inset:0;background:#30363d;border-radius:10px;transition:.2s}
+.toggle-slider::before{content:'';position:absolute;width:16px;height:16px;border-radius:50%;background:#8b949e;top:2px;left:2px;transition:.2s}
+.toggle-switch input:checked+.toggle-slider{background:#238636}
+.toggle-switch input:checked+.toggle-slider::before{background:#fff;transform:translateX(16px)}
+.ban-input{width:100%!important;max-width:100%!important;margin-top:4px}
+.reset-btn{padding:8px 16px;background:#da3633;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;width:100%}
+.reset-btn:hover{background:#f85149}
 </style>
 </head>
 <body>
 <div id="messages"></div>
+<button id="settings-toggle" title="Display settings">⚙</button>
+<div id="settings-panel">
+  <div class="panel-header">
+    <h2>Display Settings</h2>
+    <button class="panel-close" id="settings-close">&times;</button>
+  </div>
+  <div class="panel-body">
+    <section>
+      <h3>Interface / Basic</h3>
+      <div class="setting"><label>Background color</label><input type="color" id="s-bg" value="#000000"></div>
+      <div class="setting"><label>Show chat source badges</label><label class="toggle-switch"><input type="checkbox" id="s-badges" checked><span class="toggle-slider"></span></label></div>
+      <div class="setting"><label>Use custom font styles</label><label class="toggle-switch"><input type="checkbox" id="s-fonts" checked><span class="toggle-slider"></span></label></div>
+    </section>
+    <section>
+      <h3>Chat Bubbles</h3>
+      <div class="setting"><label>Bubble background mode</label><select id="s-bubble-bg-mode"><option value="fill">Fill rectangle</option><option value="text">Beneath text</option><option value="none">No background</option></select></div>
+      <div class="setting"><label>Show bubble background</label><label class="toggle-switch"><input type="checkbox" id="s-bubble-bg" checked><span class="toggle-slider"></span></label></div>
+      <div class="setting"><label>Twitch username color</label><label class="toggle-switch"><input type="checkbox" id="s-twitch-color" checked><span class="toggle-slider"></span></label></div>
+      <div class="setting"><label>YouTube username color</label><input type="color" id="s-yt-color" value="#ff0033"></div>
+      <div class="setting"><label>Disable chat animations</label><label class="toggle-switch"><input type="checkbox" id="s-no-anim"><span class="toggle-slider"></span></label></div>
+      <div class="setting"><label>Show message time</label><label class="toggle-switch"><input type="checkbox" id="s-time"><span class="toggle-slider"></span></label></div>
+      <div class="setting"><label>Bubble background color</label><input type="color" id="s-bubble-color" value="#0d1117"></div>
+      <div class="setting"><label>Bubble shape</label><select id="s-bubble-shape"><option value="rounded">Rounded</option><option value="circle">Circle</option><option value="square">Square</option></select></div>
+    </section>
+    <section>
+      <h3>Chats</h3>
+      <div class="setting"><label>Twitch</label><label class="toggle-switch"><input type="checkbox" id="s-src-twitch" checked><span class="toggle-slider"></span></label></div>
+      <div class="setting"><label>YouTube</label><label class="toggle-switch"><input type="checkbox" id="s-src-youtube" checked><span class="toggle-slider"></span></label></div>
+      <div class="setting"><label>Discord</label><label class="toggle-switch"><input type="checkbox" id="s-src-discord"><span class="toggle-slider"></span></label></div>
+      <div class="setting"><label>BoneBridge</label><label class="toggle-switch"><input type="checkbox" id="s-src-custom" checked><span class="toggle-slider"></span></label></div>
+    </section>
+    <section>
+      <h3>Banlist</h3>
+      <div class="setting"><label>Banned users (space separated)</label><input type="text" class="ban-input" id="s-banlist" placeholder="user1 user2"></div>
+    </section>
+    <section>
+      <h3>Advanced</h3>
+      <button class="reset-btn" id="s-reset">Reset all settings to default</button>
+    </section>
+  </div>
+</div>
 <script src="/socket.io/socket.io.js"></script>
 <script>
 const socket = io();
@@ -52,6 +121,37 @@ const flags = {
   genderfluid: ['#ff76a4','#fff','#bf11d','#000','#303cbe'],
   agender: ['#000','#bababa','#fff','#baf484','#fff','#bababa','#000']
 };
+
+const DEFAULT_SETTINGS = {
+  bg:'#000000', badges:true, fonts:true,
+  bubbleBgMode:'fill', showBubbleBg:true, twitchColor:true, ytColor:'#ff0033',
+  noAnim:false, showTime:false, bubbleColor:'#0d1117', bubbleShape:'rounded',
+  srcTwitch:true, srcYoutube:true, srcDiscord:false, srcCustom:true,
+  banlist:''
+};
+
+let settings = (() => {
+  try { return {...DEFAULT_SETTINGS, ...JSON.parse(localStorage.getItem('liveSettings')||'{}')}; } catch { return {...DEFAULT_SETTINGS}; }
+})();
+
+function saveSettings() { localStorage.setItem('liveSettings', JSON.stringify(settings)); }
+
+function applySettings() {
+  document.body.style.background = settings.bg === '#000000' ? 'transparent' : settings.bg;
+  document.documentElement.style.setProperty('--bubble-color', settings.bubbleColor);
+  document.documentElement.style.setProperty('--bubble-radius',
+    settings.bubbleShape === 'circle' ? '50px' : settings.bubbleShape === 'square' ? '0' : '10px');
+  document.documentElement.style.setProperty('--bubble-bg-mode',
+    settings.bubbleBgMode === 'none' ? 'transparent' : settings.showBubbleBg ? settings.bubbleColor : 'transparent');
+  // re-style existing messages
+  document.querySelectorAll('.msg').forEach(el => {
+    el.style.background = settings.showBubbleBg && settings.bubbleBgMode !== 'none' ? settings.bubbleColor : 'transparent';
+    el.style.borderRadius = document.documentElement.style.getPropertyValue('--bubble-radius');
+    el.style.border = settings.showBubbleBg ? '1px solid rgba(48,54,61,0.5)' : 'none';
+    el.querySelectorAll('.badge').forEach(b => b.style.display = settings.badges ? '' : 'none');
+    el.querySelectorAll('.time').forEach(t => t.style.display = settings.showTime ? '' : 'none');
+  });
+}
 
 function stripMeta(text) {
   const s = text.indexOf('\u200D'); if(s===-1)return text;
@@ -79,8 +179,7 @@ function applyWave(el, text) {
     const sp = document.createElement('span');
     sp.textContent = text[i] === ' ' ? '\u00A0' : text[i];
     sp.style.display = 'inline-block';
-    el.appendChild(sp);
-    spans.push(sp);
+    el.appendChild(sp); spans.push(sp);
   }
   const startTime = performance.now();
   function frame(t) {
@@ -91,11 +190,8 @@ function applyWave(el, text) {
       const phase = (elapsed / 1000 + i * 0.08) / 0.4 * Math.PI * 2;
       spans[i].style.transform = `translateY(${Math.sin(phase) * amp}px)`;
     }
-    if (elapsed < EFFECT_DURATION) {
-      el._effectTimer = requestAnimationFrame(frame);
-    } else {
-      el.innerHTML = text;
-    }
+    if (elapsed < EFFECT_DURATION) el._effectTimer = requestAnimationFrame(frame);
+    else el.innerHTML = text;
   }
   el._effectTimer = requestAnimationFrame(frame);
 }
@@ -107,8 +203,7 @@ function applyRainbow(el, text) {
   for (let i = 0; i < text.length; i++) {
     const sp = document.createElement('span');
     sp.textContent = text[i] === ' ' ? '\u00A0' : text[i];
-    el.appendChild(sp);
-    spans.push(sp);
+    el.appendChild(sp); spans.push(sp);
   }
   const startTime = performance.now();
   function frame(t) {
@@ -121,11 +216,8 @@ function applyRainbow(el, text) {
       const hue = ((i / spans.length) * 360 + elapsed / 1000 * 120) % 360;
       spans[i].style.color = `hsl(${hue}, ${sat}, ${light}%)`;
     }
-    if (elapsed < EFFECT_DURATION) {
-      el._effectTimer = requestAnimationFrame(frame);
-    } else {
-      el.innerHTML = text;
-    }
+    if (elapsed < EFFECT_DURATION) el._effectTimer = requestAnimationFrame(frame);
+    else el.innerHTML = text;
   }
   el._effectTimer = requestAnimationFrame(frame);
 }
@@ -138,8 +230,7 @@ function applyFlag(el, text, fname) {
   for (let i = 0; i < text.length; i++) {
     const sp = document.createElement('span');
     sp.textContent = text[i] === ' ' ? '\u00A0' : text[i];
-    el.appendChild(sp);
-    spans.push(sp);
+    el.appendChild(sp); spans.push(sp);
   }
   const startTime = performance.now();
   function frame(t) {
@@ -152,13 +243,23 @@ function applyFlag(el, text, fname) {
       spans[i].style.color = cols[ci];
       spans[i].style.opacity = fade;
     }
-    if (elapsed < EFFECT_DURATION) {
-      el._effectTimer = requestAnimationFrame(frame);
-    } else {
-      el.innerHTML = text;
-    }
+    if (elapsed < EFFECT_DURATION) el._effectTimer = requestAnimationFrame(frame);
+    else el.innerHTML = text;
   }
   el._effectTimer = requestAnimationFrame(frame);
+}
+
+function isBanned(username) {
+  if (!settings.banlist) return false;
+  return settings.banlist.split(/\s+/).some(b => b.toLowerCase() === username.toLowerCase());
+}
+
+function srcKey(source) {
+  if (source === 'twitch') return 'srcTwitch';
+  if (source === 'youtube') return 'srcYoutube';
+  if (source === 'discord') return 'srcDiscord';
+  if (source === 'custom') return 'srcCustom';
+  return null;
 }
 
 socket.on('history', (msgs) => {
@@ -167,6 +268,9 @@ socket.on('history', (msgs) => {
 });
 
 socket.on('message', (msg) => {
+  const sk = srcKey(msg.source);
+  if (sk && !settings[sk]) return;
+  if (isBanned(msg.username)) return;
   appendMessage(msg, false);
   while (messagesEl.children.length > MAX_VISIBLE) messagesEl.removeChild(messagesEl.firstChild);
 });
@@ -179,6 +283,7 @@ function appendMessage(msg, fromHistory) {
   const badge = document.createElement('span');
   badge.className = `badge badge-${src}`;
   badge.textContent = msg.source === 'custom' ? 'BONEBRG' : msg.source;
+  badge.style.display = settings.badges ? '' : 'none';
   div.appendChild(badge);
 
   if (msg.replyTo) {
@@ -192,7 +297,8 @@ function appendMessage(msg, fromHistory) {
   const user = document.createElement('span');
   user.className = 'user';
   user.textContent = msg.username + ':';
-  if (msg.source === 'twitch' && msg.color) user.style.color = msg.color;
+  if (msg.source === 'twitch' && msg.color && settings.twitchColor) user.style.color = msg.color;
+  if (msg.source === 'youtube') user.style.color = settings.ytColor;
   div.appendChild(user);
 
   if (msg.linked) {
@@ -208,10 +314,11 @@ function appendMessage(msg, fromHistory) {
   text.textContent = cleanText;
   div.appendChild(text);
 
-  if (msg.font) applyFontStyle(text, msg.font);
+  if (msg.font && settings.fonts) applyFontStyle(text, msg.font);
 
   const time = document.createElement('span');
   time.className = 'time';
+  time.style.display = settings.showTime ? '' : 'none';
   time.textContent = new Date(msg.timestamp).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
   div.appendChild(time);
 
@@ -225,16 +332,82 @@ function appendMessage(msg, fromHistory) {
       else if (msg.effect && msg.effect.startsWith('flag:')) applyFlag(text, cleanText, msg.effect.replace('flag:', ''));
     };
     div.appendChild(et);
-    if (!fromHistory) setTimeout(() => {
+    if (!fromHistory && !settings.noAnim) setTimeout(() => {
       if (msg.effect === 'wave') applyWave(text, cleanText);
       else if (msg.effect === 'rainbow') applyRainbow(text, cleanText);
       else if (msg.effect && msg.effect.startsWith('flag:')) applyFlag(text, cleanText, msg.effect.replace('flag:', ''));
     }, 100);
   }
 
+  div.style.background = settings.showBubbleBg && settings.bubbleBgMode !== 'none' ? settings.bubbleColor : 'transparent';
+  div.style.borderRadius = settings.bubbleShape === 'circle' ? '50px' : settings.bubbleShape === 'square' ? '0' : '10px';
+  div.style.border = settings.showBubbleBg ? '1px solid rgba(48,54,61,0.5)' : 'none';
+
   messagesEl.appendChild(div);
   if (!fromHistory) setTimeout(() => div.scrollIntoView({ behavior:'smooth', block:'end' }), 50);
 }
+
+// Settings panel UI
+const panel = document.getElementById('settings-panel');
+const toggle = document.getElementById('settings-toggle');
+const closeBtn = document.getElementById('settings-close');
+
+function showToggle() { toggle.classList.add('show'); }
+function hideToggle() { toggle.classList.remove('show'); }
+
+let toggleVisible = false;
+document.addEventListener('mousemove', () => { showToggle(); toggleVisible = true; });
+document.addEventListener('mouseleave', () => { if (!panel.classList.contains('show')) { hideToggle(); toggleVisible = false; } });
+
+toggle.onclick = () => { panel.classList.add('show'); hideToggle(); };
+closeBtn.onclick = () => { panel.classList.remove('show'); showToggle(); };
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === ' ' && !panel.classList.contains('show')) {
+    e.preventDefault();
+    if (toggleVisible) { hideToggle(); toggleVisible = false; }
+    else { showToggle(); toggleVisible = true; }
+  }
+  if (e.key === 'Escape' && panel.classList.contains('show')) panel.classList.remove('show');
+});
+
+// Wire up settings controls
+const settingMap = {
+  's-bg': 'bg', 's-badges': 'badges', 's-fonts': 'fonts',
+  's-bubble-bg-mode': 'bubbleBgMode', 's-bubble-bg': 'showBubbleBg',
+  's-twitch-color': 'twitchColor', 's-yt-color': 'ytColor',
+  's-no-anim': 'noAnim', 's-time': 'showTime',
+  's-bubble-color': 'bubbleColor', 's-bubble-shape': 'bubbleShape',
+  's-src-twitch': 'srcTwitch', 's-src-youtube': 'srcYoutube',
+  's-src-discord': 'srcDiscord', 's-src-custom': 'srcCustom',
+  's-banlist': 'banlist',
+};
+
+Object.entries(settingMap).forEach(([id, key]) => {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (el.type === 'checkbox') el.checked = settings[key];
+  else el.value = settings[key];
+  el.onchange = el.oninput = () => {
+    settings[key] = el.type === 'checkbox' ? el.checked : el.value;
+    saveSettings();
+    applySettings();
+  };
+});
+
+document.getElementById('s-reset').onclick = () => {
+  settings = {...DEFAULT_SETTINGS};
+  saveSettings();
+  Object.entries(settingMap).forEach(([id, key]) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (el.type === 'checkbox') el.checked = settings[key];
+    else el.value = settings[key];
+  });
+  applySettings();
+};
+
+applySettings();
 </script>
 </body>
 </html>
