@@ -74,6 +74,7 @@ body{background:transparent;font-family:'Segoe UI',-apple-system,BlinkMacSystemF
       <div class="setting"><label>Transparent for OBS</label><label class="toggle-switch"><input type="checkbox" id="s-obs"><span class="toggle-slider"></span></label></div>
       <div class="setting"><label>Show chat source badges</label><label class="toggle-switch"><input type="checkbox" id="s-badges" checked><span class="toggle-slider"></span></label></div>
       <div class="setting"><label>Use custom font styles</label><label class="toggle-switch"><input type="checkbox" id="s-fonts" checked><span class="toggle-slider"></span></label></div>
+      <div class="setting"><label>Use user message backgrounds</label><label class="toggle-switch"><input type="checkbox" id="s-user-bg" checked><span class="toggle-slider"></span></label></div>
       <div class="setting"><label>Text size: <span id="s-text-size-val">14</span>px</label><input type="range" id="s-text-size" min="8" max="30" value="14" step="1"></div>
     </section>
     <section>
@@ -238,7 +239,7 @@ const flags = {
 };
 
 const DEFAULT_SETTINGS = {
-  bg:'#000000', badges:true, fonts:true, obsTransparent:true, textSize:14,
+  bg:'#000000', badges:true, fonts:true, userBg:true, obsTransparent:true, textSize:14,
   bubbleBgMode:'fill', showBubbleBg:true, twitchColor:true, twitchFallback:'#e6edf3', ytColor:'#ff0033',
   noAnim:false, showTime:false, msgLife:8, bubbleColor:'#0d1117', bubbleShape:'rounded',
   srcTwitch:true, srcYoutube:true, srcDiscord:false, srcCustom:true,
@@ -299,7 +300,7 @@ function applyFontStyle(el, f) {
   const hasShadow = f.shx || f.shy || f.shb;
   const sh = hasShadow ? `${f.shx||0}px ${f.shy||0}px ${f.shb||0}px ${f.shc}${f.sho < 100 ? Math.round(f.sho*2.55).toString(16).padStart(2,'0') : ''}` : 'none';
   el.style.cssText = `font-family:${f.fn};color:${f.fc||'#e6edf3'};-webkit-text-stroke:${ol};text-shadow:${sh}`;
-  el.style.background = f.bg || 'transparent';
+  el.style.background = settings.userBg && f.bg ? f.bg : 'transparent';
 }
 
 function stopEffect(el) {
@@ -556,7 +557,7 @@ document.addEventListener('keydown', (e) => {
 
 // Wire up settings controls
 const settingMap = {
-  's-bg': 'bg', 's-obs': 'obsTransparent', 's-badges': 'badges', 's-fonts': 'fonts', 's-text-size': 'textSize',
+  's-bg': 'bg', 's-obs': 'obsTransparent', 's-badges': 'badges', 's-fonts': 'fonts', 's-user-bg': 'userBg', 's-text-size': 'textSize',
   's-bubble-bg-mode': 'bubbleBgMode', 's-bubble-bg': 'showBubbleBg',
   's-twitch-color': 'twitchColor', 's-twitch-fallback': 'twitchFallback', 's-yt-color': 'ytColor',
   's-no-anim': 'noAnim', 's-time': 'showTime',
