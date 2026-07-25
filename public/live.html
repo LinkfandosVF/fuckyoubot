@@ -111,6 +111,34 @@ body{background:transparent;font-family:'Segoe UI',-apple-system,BlinkMacSystemF
 const socket = io();
 const messagesEl = document.getElementById('messages');
 const MAX_VISIBLE = 30;
+const emoteMap = new Map();
+
+async function loadEmotes() {
+  try {
+    const [ffzGlobal, bttvGlobal] = await Promise.all([
+      fetch('https://api.frankerfacez.com/v1/set/global').then(r=>r.json()).catch(()=>null),
+      fetch('https://api.betterttv.net/3/cached/emotes/global').then(r=>r.json()).catch(()=>null)
+    ]);
+    if (ffzGlobal) {
+      for (const set of Object.values(ffzGlobal.sets || {}))
+        for (const em of set.emoticons || [])
+          emoteMap.set(em.name.toLowerCase(), `https:${em.urls['1']||em.urls['2']||em.urls['4']||''}`);
+    }
+    if (bttvGlobal) {
+      for (const em of bttvGlobal)
+        emoteMap.set(em.code.toLowerCase(), `https://cdn.betterttv.net/emote/${em.id}/2x`);
+    }
+  } catch(e) { console.log('emote load error:', e); }
+  try {
+    const ffzChan = await fetch('https://api.frankerfacez.com/v1/room/mrpemmfub').then(r=>r.json()).catch(()=>null);
+    if (ffzChan && ffzChan.sets) {
+      for (const set of Object.values(ffzChan.sets))
+        for (const em of set.emoticons || [])
+          emoteMap.set(em.name.toLowerCase(), `https:${em.urls['1']||em.urls['2']||em.urls['4']||''}`);
+    }
+  } catch(e) { console.log('ffz channel error:', e); }
+}
+loadEmotes();
 const EFFECT_DURATION = 5000;
 const FADE_DURATION = 1000;
 const flags = {
@@ -329,40 +357,21 @@ socket.on('message', (msg) => {
   while (messagesEl.children.length > MAX_VISIBLE) messagesEl.removeChild(messagesEl.firstChild);
 });
 
-function renderTextWithEmotes(text, emotes) {
-  if (!emotes) return [document.createTextNode(text)];
-  let parsed = emotes;
-  if (typeof emotes === 'string') {
-    parsed = {};
-    for (const part of emotes.split('/')) {
-      const [id, poses] = part.split(':');
-      if (id && poses) parsed[id] = poses.split(',');
-    }
-  }
-  if (typeof parsed !== 'object') return [document.createTextNode(text)];
-  const ranges = [];
-  for (const id in parsed) {
-    if (!Object.prototype.hasOwnProperty.call(parsed, id)) continue;
-    for (const pos of parsed[id]) {
-      const [s, e] = pos.split('-').map(Number);
-      if (isNaN(s) || isNaN(e)) continue;
-      ranges.push({ start: s, end: e, id });
-    }
-  }
-  ranges.sort((a, b) => a.start - b.start);
+function renderTextWithEmotes(text) {
+  const parts = text.split(/(\s+)/);
   const nodes = [];
-  let last = 0;
-  for (const r of ranges) {
-    if (r.start < last) continue;
-    if (r.start > last) nodes.push(document.createTextNode(text.slice(last, r.start)));
-    const img = document.createElement('img');
-    img.src = `https://static-cdn.jtvnw.net/emoticons/v2/${r.id}/default/dark/2.0`;
-    img.alt = text.slice(r.start, r.end + 1);
-    img.style.cssText = 'vertical-align:middle;width:28px;height:28px;display:inline-block';
-    nodes.push(img);
-    last = r.end + 1;
+  for (const part of parts) {
+    const key = part.toLowerCase();
+    if (emoteMap.has(key)) {
+      const img = document.createElement('img');
+      img.src = emoteMap.get(key);
+      img.alt = part;
+      img.style.cssText = 'vertical-align:middle;width:28px;height:28px;display:inline-block';
+      nodes.push(img);
+    } else {
+      nodes.push(document.createTextNode(part));
+    }
   }
-  if (last < text.length) nodes.push(document.createTextNode(text.slice(last)));
   return nodes.length ? nodes : [document.createTextNode(text)];
 }
 
@@ -404,7 +413,7 @@ function appendMessage(msg, fromHistory) {
   const text = document.createElement('span');
   text.className = 'text';
   const cleanText = stripMeta(msg.message);
-  const textNodes = renderTextWithEmotes(cleanText, msg.emotes);
+  const textNodes = renderTextWithEmotes(cleanText);
   text.append(...textNodes);
   div.appendChild(text);
 
