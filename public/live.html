@@ -82,6 +82,7 @@ body{background:transparent;font-family:'Segoe UI',-apple-system,BlinkMacSystemF
       <div class="setting"><label>Bubble background mode</label><select id="s-bubble-bg-mode"><option value="fill">Fill rectangle</option><option value="text">Beneath text</option><option value="none">No background</option></select></div>
       <div class="setting"><label>Show bubble background</label><label class="toggle-switch"><input type="checkbox" id="s-bubble-bg" checked><span class="toggle-slider"></span></label></div>
       <div class="setting"><label>Twitch username color</label><label class="toggle-switch"><input type="checkbox" id="s-twitch-color" checked><span class="toggle-slider"></span></label></div>
+      <div class="setting"><label>Use user custom colors</label><label class="toggle-switch"><input type="checkbox" id="s-user-color" checked><span class="toggle-slider"></span></label></div>
       <div class="setting" id="s-twitch-fallback-row" style="display:none"><label>Twitch fallback color</label><input type="color" id="s-twitch-fallback" value="#e6edf3"></div>
       <div class="setting"><label>YouTube username color</label><input type="color" id="s-yt-color" value="#ff0033"></div>
       <div class="setting"><label>Linked account color</label><input type="color" id="s-link-color" value=""></div>
@@ -243,7 +244,7 @@ const flags = {
 
 const DEFAULT_SETTINGS = {
   bg:'#000000', badges:true, fonts:true, userBg:true, obsTransparent:true, textSize:14,
-  bubbleBgMode:'fill', showBubbleBg:true, twitchColor:true, twitchFallback:'#e6edf3', ytColor:'#ff0033',
+  bubbleBgMode:'fill', showBubbleBg:true, twitchColor:true, userColor:true, twitchFallback:'#e6edf3', ytColor:'#ff0033',
   linkColor:'', linkColor2:'', linkGradient:false,
   noAnim:false, showTime:false, msgLife:8, bubbleColor:'#0d1117', bubbleShape:'rounded',
   srcTwitch:true, srcYoutube:true, srcDiscord:false, srcCustom:true,
@@ -285,7 +286,7 @@ function applySettings() {
       user.style.background = '';
       user.style.webkitTextFillColor = '';
       user.style.color = '';
-      if (m.userColor) {
+      if (m.userColor && settings.userColor) {
         if (m.userColor.gradient && m.userColor.color2) {
           user.style.background = `linear-gradient(90deg, ${m.userColor.color}, ${m.userColor.color2})`;
           user.style.webkitBackgroundClip = 'text';
@@ -498,7 +499,7 @@ function appendMessage(msg, fromHistory) {
   const user = document.createElement('span');
   user.className = 'user';
   user.textContent = msg.username + ':';
-  if (msg.userColor) {
+  if (msg.userColor && settings.userColor) {
     if (msg.userColor.gradient && msg.userColor.color2) {
       user.style.background = `linear-gradient(90deg, ${msg.userColor.color}, ${msg.userColor.color2})`;
       user.style.webkitBackgroundClip = 'text';
@@ -607,7 +608,7 @@ document.addEventListener('keydown', (e) => {
 const settingMap = {
   's-bg': 'bg', 's-obs': 'obsTransparent', 's-badges': 'badges', 's-fonts': 'fonts', 's-user-bg': 'userBg', 's-text-size': 'textSize',
   's-bubble-bg-mode': 'bubbleBgMode', 's-bubble-bg': 'showBubbleBg',
-  's-twitch-color': 'twitchColor', 's-twitch-fallback': 'twitchFallback', 's-yt-color': 'ytColor',
+  's-twitch-color': 'twitchColor', 's-user-color': 'userColor', 's-twitch-fallback': 'twitchFallback', 's-yt-color': 'ytColor',
   's-link-color': 'linkColor', 's-link-color2': 'linkColor2', 's-link-gradient': 'linkGradient',
   's-no-anim': 'noAnim', 's-time': 'showTime',
   's-msg-life': 'msgLife',

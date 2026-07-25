@@ -554,14 +554,26 @@ userColorEls.forEach(({id, key}) => {
   if (!el) return;
   if (el.type === 'checkbox') el.checked = userColorSettings[key];
   else el.value = userColorSettings[key] !== undefined ? userColorSettings[key] : el.value;
-  el.oninput = () => {
-    if (el.type === 'checkbox') userColorSettings[key] = el.checked;
-    else userColorSettings[key] = el.value;
-    localStorage.setItem('userColor', JSON.stringify(userColorSettings));
+  const updateDisplay = () => {
     document.getElementById('user-color2-row').style.display = userColorSettings.gradient ? '' : 'none';
     document.getElementById('user-color2').style.display = userColorSettings.gradient ? '' : 'none';
+  };
+  const save = () => {
+    localStorage.setItem('userColor', JSON.stringify(userColorSettings));
+  };
+  const onChange = () => {
+    if (el.type === 'checkbox') userColorSettings[key] = el.checked;
+    else userColorSettings[key] = el.value;
+    updateDisplay();
+    updateUserColorPreview();
+    save();
+  };
+  const onInput = () => {
+    userColorSettings[key] = el.value;
     updateUserColorPreview();
   };
+  if (el.type === 'checkbox') el.onchange = onChange;
+  else { el.oninput = onInput; el.onchange = onChange; }
 });
 document.getElementById('user-color2-row').style.display = userColorSettings.gradient ? '' : 'none';
 document.getElementById('user-color2').style.display = userColorSettings.gradient ? '' : 'none';
