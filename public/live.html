@@ -314,12 +314,6 @@ function updatePlaceholder() {
     if (el) el.remove();
   }
 }
-  if (source === 'twitch') return 'srcTwitch';
-  if (source === 'youtube') return 'srcYoutube';
-  if (source === 'discord') return 'srcDiscord';
-  if (source === 'custom') return 'srcCustom';
-  return null;
-}
 
 socket.on('history', (msgs) => {
   messagesEl.innerHTML = '';
