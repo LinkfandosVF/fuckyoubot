@@ -108,17 +108,49 @@ body{background:#0d1117;color:#e6edf3;font-family:-apple-system,BlinkMacSystemFo
   <label>Background</label>
   <input type="color" id="font-bg" value="#21262d">
   <label>Outline</label>
-  <div style="display:flex;gap:8px;align-items:center">
-    <input type="number" id="font-ol" min="0" max="5" step="1" value="0" style="width:50px" title="Thickness (px)">
-    <input type="color" id="font-olc" value="#000000" style="flex:1;height:36px" title="Outline color">
+  <select id="font-ol-preset">
+    <option value="none">None</option>
+    <option value="thin-black">Thin Black</option>
+    <option value="thick-black">Thick Black</option>
+    <option value="thin-white">Thin White</option>
+    <option value="thick-white">Thick White</option>
+    <option value="custom">Custom</option>
+  </select>
+  <div style="display:flex;gap:8px;align-items:center;margin-top:4px">
+    <span style="font-size:11px;color:#8b949e;white-space:nowrap;min-width:24px">0px</span>
+    <input type="range" id="font-ol" min="0" max="5" step="1" value="0" style="flex:1">
+    <input type="color" id="font-olc" value="#000000" style="width:32px;height:28px;padding:0;border:none;cursor:pointer">
   </div>
   <label>Shadow</label>
-  <div style="display:flex;gap:6px;flex-wrap:wrap">
-    <input type="number" id="font-shx" min="-20" max="20" step="1" value="1" style="width:44px" title="X offset">
-    <input type="number" id="font-shy" min="-20" max="20" step="1" value="1" style="width:44px" title="Y offset">
-    <input type="number" id="font-shb" min="0" max="40" step="1" value="2" style="width:44px" title="Blur radius">
-    <input type="color" id="font-shc" value="#000000" style="flex:1;min-width:30px;height:36px" title="Shadow color">
-    <input type="range" id="font-sho" min="0" max="100" value="50" style="width:50px" title="Shadow opacity">
+  <select id="font-sh-preset">
+    <option value="none">None</option>
+    <option value="soft">Soft</option>
+    <option value="medium">Medium</option>
+    <option value="strong">Strong</option>
+    <option value="soft-light">Soft Light</option>
+    <option value="custom">Custom</option>
+  </select>
+  <div id="font-sh-controls" style="margin-top:4px">
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:3px">
+      <span style="font-size:11px;color:#8b949e;width:28px">X</span>
+      <input type="range" id="font-shx" min="-20" max="20" step="1" value="0" style="flex:1">
+      <span style="font-size:11px;color:#8b949e;text-align:right;min-width:24px" id="font-shx-val">0</span>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:3px">
+      <span style="font-size:11px;color:#8b949e;width:28px">Y</span>
+      <input type="range" id="font-shy" min="-20" max="20" step="1" value="0" style="flex:1">
+      <span style="font-size:11px;color:#8b949e;text-align:right;min-width:24px" id="font-shy-val">0</span>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:3px">
+      <span style="font-size:11px;color:#8b949e;width:28px">Blur</span>
+      <input type="range" id="font-shb" min="0" max="40" step="1" value="0" style="flex:1">
+      <span style="font-size:11px;color:#8b949e;text-align:right;min-width:24px" id="font-shb-val">0</span>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <input type="color" id="font-shc" value="#000000" style="width:32px;height:28px;padding:0;border:none;cursor:pointer">
+      <input type="range" id="font-sho" min="0" max="100" step="1" value="0" style="flex:1">
+      <span style="font-size:11px;color:#8b949e;text-align:right;min-width:24px" id="font-sho-val">0%</span>
+    </div>
   </div>
   <button class="reset-btn" id="reset-font">Reset to Defaults</button>
   <div class="font-preview" id="font-preview">AaBbYy</div>
@@ -328,7 +360,6 @@ function appendMessage(msg, scroll) {
 
 function stopEffect(el) {
   if (el._effectTimer) { cancelAnimationFrame(el._effectTimer); el._effectTimer = null; }
-  el.classList.remove('flag-text');
 }
 
 function applyWave(el, text) {
@@ -393,20 +424,29 @@ function applyRainbow(el, text) {
 function applyFlag(el, text, fname) {
   stopEffect(el);
   const cols = flags[fname] || flags.pride;
-  el.innerHTML = `<span class="flag-text" style="background:linear-gradient(90deg,${cols.join(',')})">${text}</span>`;
-  el.classList.add('flag-text');
+  el.innerHTML = '';
+  const spans = [];
+  for (let i = 0; i < text.length; i++) {
+    const sp = document.createElement('span');
+    sp.textContent = text[i] === ' ' ? '\u00A0' : text[i];
+    el.appendChild(sp);
+    spans.push(sp);
+  }
   const startTime = performance.now();
   function frame(t) {
     const elapsed = t - startTime;
     const remaining = Math.max(0, EFFECT_DURATION - elapsed);
     const fade = Math.min(remaining / FADE_DURATION, 1);
-    el.style.opacity = fade;
+    const offset = Math.floor(elapsed / 300) % cols.length;
+    for (let i = 0; i < spans.length; i++) {
+      const ci = (i + offset) % cols.length;
+      spans[i].style.color = cols[ci];
+      spans[i].style.opacity = fade;
+    }
     if (elapsed < EFFECT_DURATION) {
       el._effectTimer = requestAnimationFrame(frame);
     } else {
-      el.classList.remove('flag-text');
       el.innerHTML = text;
-      el.style.opacity = '';
     }
   }
   el._effectTimer = requestAnimationFrame(frame);

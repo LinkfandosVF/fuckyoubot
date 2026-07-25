@@ -60,7 +60,6 @@ function stripMeta(text) {
 
 function stopEffect(el) {
   if (el._effectTimer) { cancelAnimationFrame(el._effectTimer); el._effectTimer = null; }
-  el.classList.remove('flag-text');
 }
 
 function applyWave(el, text) {
@@ -125,20 +124,29 @@ function applyRainbow(el, text) {
 function applyFlag(el, text, fname) {
   stopEffect(el);
   const cols = flags[fname] || flags.pride;
-  el.innerHTML = `<span class="flag-text" style="background:linear-gradient(90deg,${cols.join(',')})">${text}</span>`;
-  el.classList.add('flag-text');
+  el.innerHTML = '';
+  const spans = [];
+  for (let i = 0; i < text.length; i++) {
+    const sp = document.createElement('span');
+    sp.textContent = text[i] === ' ' ? '\u00A0' : text[i];
+    el.appendChild(sp);
+    spans.push(sp);
+  }
   const startTime = performance.now();
   function frame(t) {
     const elapsed = t - startTime;
     const remaining = Math.max(0, EFFECT_DURATION - elapsed);
     const fade = Math.min(remaining / FADE_DURATION, 1);
-    el.style.opacity = fade;
+    const offset = Math.floor(elapsed / 300) % cols.length;
+    for (let i = 0; i < spans.length; i++) {
+      const ci = (i + offset) % cols.length;
+      spans[i].style.color = cols[ci];
+      spans[i].style.opacity = fade;
+    }
     if (elapsed < EFFECT_DURATION) {
       el._effectTimer = requestAnimationFrame(frame);
     } else {
-      el.classList.remove('flag-text');
       el.innerHTML = text;
-      el.style.opacity = '';
     }
   }
   el._effectTimer = requestAnimationFrame(frame);
