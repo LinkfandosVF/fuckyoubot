@@ -1,0 +1,21 @@
+[
+  {
+    "platform": "twitch",
+    "username": "linkfandosfr",
+    "passwordHash": "f99e72f8a7a2bb466029a98541557403d7d96343ffa62247ad4fc764a21b925f",
+    "salt": "jh4pxpjtcxoykmf2tse2rc",
+    "nick": "Alas",
+    "font": {
+      "fn": "VT323",
+      "fc": "#ffffff",
+      "bg": "#0433ff",
+      "ol": 0,
+      "olc": "#000000",
+      "shx": 1,
+      "shy": 2,
+      "shb": 0,
+      "shc": "#ff2600",
+      "sho": 100
+    }
+  }
+]

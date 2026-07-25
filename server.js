@@ -102,12 +102,14 @@ function addMessage(source, username, text, replyTo = null, timestamp = null, co
   let displayName = username;
   let displayFont = font;
   let linked = false;
-  const link = linkedAccounts.find(l => l.platform === source && l.username.toLowerCase() === username.toLowerCase());
-  if (link) {
-    linked = true;
-    if (link.nick) displayName = link.nick;
-    if (link.font) displayFont = link.font;
-  }
+  try {
+    const link = linkedAccounts.find(l => l.platform === source && l.username && username && l.username.toLowerCase() === username.toLowerCase());
+    if (link) {
+      linked = true;
+      if (link.nick) displayName = link.nick;
+      if (link.font) displayFont = link.font;
+    }
+  } catch (e) { console.log('link check error:', e.message); }
   const msg = { id, source, username: displayName, message: text, timestamp: ts, replyTo, color, effect, font: displayFont };
   if (linked) msg.linked = true;
   messages.push(msg);
@@ -190,6 +192,7 @@ findYTChannel().then(() => { checkYTLive(); setInterval(checkYTLive, 60000); });
 io.on('connection', (socket) => {
   socket.emit('history', messages.slice(-50));
   socket.on('sendMessage', (data) => {
+    console.log('sendMessage received:', data.source, data.username, data.message?.slice(0,20));
     addMessage(data.source || 'custom', data.username, data.message, data.replyTo || null, null, null, data.effect || null, data.font || null);
   });
   socket.on('command', (data) => {
