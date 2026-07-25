@@ -152,6 +152,7 @@ function addMessage(source, username, text, replyTo = null, timestamp = null, co
       linked = true;
       if (link.nick) displayName = link.nick;
       if (link.font) displayFont = link.font;
+      if (!userColor && link.userColor) userColor = link.userColor;
     }
   } catch (e) { console.log('link check error:', e.message); }
   const parsedHtml = source === 'twitch' ? preParseTwitchEmotes(text, emotes) : parseEmotes(text);
@@ -198,7 +199,7 @@ async function findYTChannel() {
     const r = await axios.get('https://www.googleapis.com/youtube/v3/search', { params: { part: 'snippet', q: YOUTUBE_CHANNEL, type: 'channel', key: YOUTUBE_API_KEY } });
     ytChannelId = r.data.items?.[0]?.id?.channelId;
     if (ytChannelId) console.log('YouTube channel:', ytChannelId);
-  } catch (e) { console.log('YouTube channel lookup failed:', e.message); }
+  } catch (e) { console.log('YouTube channel lookup failed:', e.message); if (e.response?.status === 429) setTimeout(findYTChannel, 30000); }
 }
 
 async function checkYTLive() {
@@ -245,7 +246,7 @@ io.on('connection', (socket) => {
     if (data.command === 'nick' && data.args) socket.emit('nickChanged', data.args);
   });
   socket.on('link:link', (data) => {
-    const { platform, username, password, nick, font } = data;
+    const { platform, username, password, nick, font, userColor } = data;
     if (!['twitch', 'youtube'].includes(platform)) return socket.emit('link:result', { success: false, message: 'Invalid platform' });
     if (!username || !password) return socket.emit('link:result', { success: false, message: 'Username and password required' });
     const existing = linkedAccounts.find(l => l.platform === platform && l.username.toLowerCase() === username.toLowerCase());
@@ -254,12 +255,13 @@ io.on('connection', (socket) => {
       if (hash !== existing.passwordHash) return socket.emit('link:result', { success: false, message: 'Wrong password' });
       existing.nick = nick || existing.nick;
       existing.font = font || existing.font;
+      if (userColor) existing.userColor = userColor;
       saveLinked();
       socket.emit('link:result', { success: true, message: `Updated link for ${platform}/${username}` });
     } else {
       const salt = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
       const passwordHash = crypto.createHash('sha256').update(password + salt).digest('hex');
-      linkedAccounts.push({ platform, username: username.toLowerCase(), passwordHash, salt, nick: nick || null, font: font || null });
+      linkedAccounts.push({ platform, username: username.toLowerCase(), passwordHash, salt, nick: nick || null, font: font || null, userColor: userColor || null });
       saveLinked();
       socket.emit('link:result', { success: true, message: `Linked ${platform}/${username}` });
     }

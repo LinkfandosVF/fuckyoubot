@@ -425,7 +425,7 @@ function linkDo(pwOk) {
   const u = linkUsername.value.trim();
   const pw = linkPassword.value.trim();
   if (!u || !pw) { linkStatus.className = 'link-status err'; linkStatus.textContent = 'Fill in all fields'; return; }
-  if (pwOk) socket.emit('link:link', { platform: p, username: u, password: pw, nick: username, font: fontSettings });
+  if (pwOk) socket.emit('link:link', { platform: p, username: u, password: pw, nick: username, font: fontSettings, userColor: userColorSettings });
   else socket.emit('link:unlink', { platform: p, username: u, password: pw });
 }
 document.getElementById('link-do-link').onclick = () => linkDo(true);
@@ -890,7 +890,7 @@ function sendMessage() {
     }
     if (cmd === '/link') {
       if (parts.length >= 4) {
-        socket.emit('link:link', { platform: parts[1].toLowerCase(), username: parts[2], password: parts[3], nick: username, font: fontSettings });
+        socket.emit('link:link', { platform: parts[1].toLowerCase(), username: parts[2], password: parts[3], nick: username, font: fontSettings, userColor: userColorSettings });
         input.value = ''; hideAutocomplete(); return;
       } else { linkPanel.classList.toggle('show'); settingsPanel.classList.remove('show'); input.value = ''; hideAutocomplete(); return; }
     }
