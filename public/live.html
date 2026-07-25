@@ -476,8 +476,12 @@ function appendMessage(msg, fromHistory) {
   const text = document.createElement('span');
   text.className = 'text';
   const cleanText = stripMeta(msg.message);
-  const textNodes = renderTextWithEmotes(cleanText, msg.emotes);
-  text.append(...textNodes);
+  if (msg.parsedHtml) {
+    text.innerHTML = msg.parsedHtml;
+  } else {
+    const textNodes = renderTextWithEmotes(cleanText, msg.emotes);
+    text.append(...textNodes);
+  }
   div.appendChild(text);
 
   if (msg.font && settings.fonts) applyFontStyle(text, msg.font);

@@ -625,9 +625,8 @@ function appendMessage(msg, scroll) {
       applyFlag(bubble, msg.message, msg.effect.replace('flag:', ''));
     }
     else {
-    // Pass msg.emotes here so the function can parse native Twitch emotes
-    const textNodes = renderTextWithEmotes(msg.message, msg.emotes);
-    bubble.append(...textNodes);
+    if (msg.parsedHtml) { bubble.innerHTML = msg.parsedHtml; }
+    else { const textNodes = renderTextWithEmotes(msg.message, msg.emotes); bubble.append(...textNodes); }
   }
     const tag = document.createElement('span');
     tag.className = 'effect-tag';
@@ -635,8 +634,8 @@ function appendMessage(msg, scroll) {
     tag.onclick = () => replayEffect(bubble, msg.effect, msg.message);
     bubble.appendChild(tag);
   } else {
-    const textNodes = renderTextWithEmotes(msg.message, msg.emotes);
-    bubble.append(...textNodes);
+    if (msg.parsedHtml) { bubble.innerHTML = msg.parsedHtml; }
+    else { const textNodes = renderTextWithEmotes(msg.message, msg.emotes); bubble.append(...textNodes); }
   }
 
   if (msg.font) applyFontStyle(bubble, msg.font);

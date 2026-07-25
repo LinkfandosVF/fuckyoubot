@@ -6,6 +6,8 @@ const { Server } = require('socket.io');
 const tmi = require('tmi.js');
 const axios = require('axios');
 
+const { EmoteFetcher, EmoteParser } = require('@mkody/twitch-emoticons');
+
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
@@ -19,6 +21,30 @@ const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY || '';
 
 const messages = [];
 let msgId = 0;
+
+const emotesFetcher = new EmoteFetcher({ forceStatic: false, twitchThemeMode: 'dark' });
+const emotesParser = new EmoteParser(emotesFetcher, { type: 'html', match: /([a-zA-Z0-9_\u00C0-\u024F]+)/g });
+let emotesReady = false;
+
+async function initEmotes() {
+  const id = await fetch('https://decapi.me/twitch/id/mrpemmfub').then(r=>r.text()).catch(()=>null);
+  await Promise.all([
+    emotesFetcher.fetchBTTVEmotes().catch(()=>{}),
+    emotesFetcher.fetchFFZEmotes().catch(()=>{}),
+    emotesFetcher.fetchSevenTVEmotes(null, {format:'webp'}).catch(()=>{}),
+    id ? emotesFetcher.fetchBTTVEmotes(id).catch(()=>{}) : Promise.resolve(),
+    id ? emotesFetcher.fetchFFZEmotes(id).catch(()=>{}) : Promise.resolve(),
+    id ? emotesFetcher.fetchSevenTVEmotes(id, {format:'webp'}).catch(()=>{}) : Promise.resolve(),
+  ]);
+  emotesReady = true;
+  console.log('Emotes ready:', emotesFetcher.emotes.size, 'loaded');
+}
+initEmotes();
+
+function parseEmotes(text) {
+  if (!emotesReady) return text;
+  try { return emotesParser.parse(text); } catch(e) { return text; }
+}
 
 const LINKED_FILE = './linked_accounts.json';
 let linkedAccounts = [];
@@ -109,7 +135,7 @@ function addMessage(source, username, text, replyTo = null, timestamp = null, co
       if (link.font) displayFont = link.font;
     }
   } catch (e) { console.log('link check error:', e.message); }
-  const msg = { id, source, username: displayName, message: text, timestamp: ts, replyTo, color, effect, font: displayFont, emotes };
+  const msg = { id, source, username: displayName, message: text, timestamp: ts, replyTo, color, effect, font: displayFont, emotes, parsedHtml: parseEmotes(text) };
   if (linked) msg.linked = true;
   messages.push(msg);
   if (messages.length > 500) messages.shift();

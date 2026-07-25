@@ -5,9 +5,10 @@
     "start": "node server.js"
   },
   "dependencies": {
+    "@mkody/twitch-emoticons": "^3.0.0-beta.7",
+    "axios": "^1.6.2",
     "express": "^4.18.2",
     "socket.io": "^4.7.2",
-    "tmi.js": "^1.8.5",
-    "axios": "^1.6.2"
+    "tmi.js": "^1.8.5"
   }
 }
