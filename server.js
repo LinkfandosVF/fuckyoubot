@@ -241,6 +241,16 @@ io.on('connection', (socket) => {
   socket.on('sendMessage', (data) => {
     console.log('sendMessage received:', data.source, data.username, data.message?.slice(0,20));
     addMessage(data.source || 'custom', data.username, data.message, data.replyTo || null, null, null, data.effect || null, data.font || null, null, data.userColor || null);
+    if (data.font || data.userColor) {
+      let changed = false;
+      for (const link of linkedAccounts) {
+        if (link.nick === data.username) {
+          if (data.font) { link.font = data.font; changed = true; }
+          if (data.userColor) { link.userColor = data.userColor; changed = true; }
+        }
+      }
+      if (changed) saveLinked();
+    }
   });
   socket.on('command', (data) => {
     if (data.command === 'nick' && data.args) socket.emit('nickChanged', data.args);
