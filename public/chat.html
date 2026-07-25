@@ -588,13 +588,17 @@ function sendMessage() {
       } else addSystemMsg(`Unknown flag: ${fname}. Available: ${Object.keys(flags).join(', ')}`);
       input.value = ''; hideAutocomplete(); return;
     }
-    if (cmd === '/link' && parts.length >= 4) {
-      socket.emit('link:link', { platform: parts[1].toLowerCase(), username: parts[2], password: parts[3], nick: username, font: fontSettings });
-      input.value = ''; hideAutocomplete(); return;
+    if (cmd === '/link') {
+      if (parts.length >= 4) {
+        socket.emit('link:link', { platform: parts[1].toLowerCase(), username: parts[2], password: parts[3], nick: username, font: fontSettings });
+        input.value = ''; hideAutocomplete(); return;
+      } else { addSystemMsg('Usage: /link <twitch|youtube> <username> <password>'); input.value = ''; hideAutocomplete(); return; }
     }
-    if (cmd === '/unlink' && parts.length >= 4) {
-      socket.emit('link:unlink', { platform: parts[1].toLowerCase(), username: parts[2], password: parts[3] });
-      input.value = ''; hideAutocomplete(); return;
+    if (cmd === '/unlink') {
+      if (parts.length >= 4) {
+        socket.emit('link:unlink', { platform: parts[1].toLowerCase(), username: parts[2], password: parts[3] });
+        input.value = ''; hideAutocomplete(); return;
+      } else { addSystemMsg('Usage: /unlink <twitch|youtube> <username> <password>'); input.value = ''; hideAutocomplete(); return; }
     }
     addSystemMsg(`Unknown command: ${cmd}`);
     input.value = ''; hideAutocomplete(); return;
